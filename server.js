@@ -1,9 +1,11 @@
 const express = require('express');
+const courseRoutes = require('./src/routes/courseRoutes');
+
 const dotenv = require('dotenv');
 const cors = require('cors');
 const authRoutes = require('./src/routes/authRoutes');
+const profileRoutes = require('./src/routes/profileRoutes'); 
 const errorHandler = require('./src/middlewares/errorHandler');
-
 // تحميل متغيرات البيئة من ملف .env
 // Load environment variables from .env file
 dotenv.config();
@@ -23,6 +25,9 @@ app.use(express.json());
 // ربط الـ Routes
 // Connect the Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/courses', courseRoutes);
+app.use('/uploads', express.static('uploads'));
+app.use('/api/profile', profileRoutes);       
 
 // ربط الـ Error Handler - يجب أن يكون آخر شيء دائماً
 // Connect Error Handler - must always be the last thing

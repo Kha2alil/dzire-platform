@@ -1,4 +1,5 @@
 const authService = require('../services/authService');
+const userRepository = require('../repositories/userRepository');
 
 /**
  * استقبال طلب التسجيل وإرسال الرد
@@ -68,7 +69,75 @@ const verifyEmail = async (req, res, next) => {
     }
 };
 
+/**
+ * استقبال طلب تسجيل الدخول وإرسال الرد
+ * Receive login request and send response
+ *
+ * POST /api/auth/login
+ */
+const login = async (req, res, next) => {
+
+    try {
+
+        // البيانات تأتي من جسم الطلب
+        // Data comes from the request body
+        const userData = req.body;
+
+        const result = await authService.login(userData);
+
+        // نرسل التوكن وبيانات المستخدم
+        // Send token and user data
+        res.status(200).json({
+            success: true,
+            message: result.message,
+            token:   result.token,
+            user:    result.user
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * جلب بيانات المستخدم الحالي
+ * Get current logged-in user data
+ *
+ * GET /api/auth/me
+ */
+const getMe = async (req, res, next) => {
+
+    try {
+
+        // req.user comes from authMiddleware — already verified
+        const user = await userRepository.findById(req.user.id);
+
+        if (!user) {
+            const error = new Error('المستخدم غير موجود / User not found');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        res.status(200).json({
+            success: true,
+            user: {
+                id:         user.id,
+                full_name:  user.full_name,
+                email:      user.email,
+                role:       user.role,
+                status:     user.status,
+                created_at: user.created_at
+            }
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     signup,
-    verifyEmail
+    verifyEmail,
+    login,
+    getMe
 };
