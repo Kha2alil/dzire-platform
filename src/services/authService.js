@@ -1,0 +1,125 @@
+const bcrypt = require('bcrypt');
+const userRepository = require('../repositories/userRepository');
+const profileRepository = require('../repositories/profileRepository');
+const gamificationRepository = require('../repositories/gamificationRepository');
+const { generateToken, verifyToken } = require('../utils/tokenGenerator');
+const { sendVerificationEmail } = require('./emailService');
+const { validateSignup } = require('../validators/authValidator');
+
+/**
+ * تسجيل مستخدم جديد
+ * Register a new user
+ *
+ * @param {Object} userData - البيانات المُرسلة من المستخدم / Data sent by the user
+ * @returns {Object} - رسالة نجاح مع الإيميل / Success message with email
+*/
+
+const signup = async (userData) => {
+
+    // الخطوة 1: تحقق من البيانات
+    // Step 1: Validate the data
+    const { valid, messages, value } = validateSignup(userData);
+    if (!valid) {
+        const error = new Error('بيانات غير صحيحة / Invalid data');
+        error.statusCode = 400;
+        error.messages = messages;
+        throw error;
+    }
+
+    // الخطوة 2: تحقق أن الإيميل غير مستخدم
+    // Step 2: Check email is not already taken
+    const existingUser = await userRepository.findByEmail(value.email);
+    if (existingUser) {
+        const error = new Error('الإيميل مستخدم مسبقاً / Email already exists');
+        error.statusCode = 409;
+        throw error;
+    }
+
+    // الخطوة 3: شفّر كلمة المرور
+    // Step 3: Hash the password
+    const password_hash = await bcrypt.hash(value.password, 12);
+
+    // الخطوة 4: أنشئ verification token
+    // Step 4: Generate verification token
+    const verificationToken = generateToken(
+        { email: value.email },
+        '24h'
+    );
+
+    // الخطوة 5: احفظ المستخدم في قاعدة البيانات
+    // Step 5: Save the user in the database
+    const user = await userRepository.createUser({
+        email: value.email,
+        password_hash,
+        full_name: value.full_name,
+        role: value.role,
+        verification_token: verificationToken,
+        token_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000)
+    });
+
+    // الخطوة 6: أنشئ Profile فارغ
+    // Step 6: Create empty Profile
+    await profileRepository.createProfile(user.id);
+
+    // الخطوة 7: أنشئ Gamification Stats للطلاب فقط
+    // Step 7: Create Gamification Stats for students only
+    await gamificationRepository.createGamificationStats(user.id, user.role);
+
+    // الخطوة 8: أرسل إيميل التحقق
+    // Step 8: Send verification email
+    await sendVerificationEmail(user.email, user.full_name, verificationToken);
+
+    // الخطوة 9: أرجع رسالة نجاح
+    // Step 9: Return success message
+    return {
+        message: 'تم التسجيل بنجاح، تحقق من إيميلك / Signed up successfully, check your email',
+        email: user.email
+    };
+};
+
+/**
+ * تفعيل حساب المستخدم عن طريق الـ token
+ * Activate user account via token
+ *
+ * @param {string} token - رمز التحقق من الإيميل / Email verification token
+ * @returns {Object} - رسالة نجاح / Success message
+ */
+const verifyEmail = async (token) => {
+
+    // الخطوة 1: تحقق من صحة الـ token
+    // Step 1: Verify the token is valid
+    const decoded = verifyToken(token);
+    // decoded = { email: "ahmed@gmail.com" }
+
+    // الخطوة 2: ابحث عن المستخدم بالإيميل
+    // Step 2: Find the user by email
+    const user = await userRepository.findByEmail(decoded.email);
+    if (!user) {
+        const error = new Error('المستخدم غير موجود / User not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    // الخطوة 3: تحقق أن الحساب لم يُفعّل مسبقاً
+    // Step 3: Check account is not already active
+    if (user.status === 'active') {
+        const error = new Error('الحساب مفعّل مسبقاً / Account already active');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    // الخطوة 4: فعّل الحساب
+    // Step 4: Activate the account
+    await userRepository.updateVerificationStatus(user.id);
+
+    // الخطوة 5: أرجع رسالة نجاح
+    // Step 5: Return success message
+    return {
+        message: 'تم تفعيل حسابك بنجاح / Account activated successfully'
+    };
+};
+
+module.exports = {
+    signup,
+    verifyEmail
+};
