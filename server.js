@@ -2,6 +2,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const authRoutes = require('./src/routes/authRoutes');
+const profileRoutes = require('./src/routes/profileRoutes');          // ← NEW
 const errorHandler = require('./src/middlewares/errorHandler');
 
 // تحميل متغيرات البيئة من ملف .env
@@ -22,7 +23,8 @@ app.use(express.json());
 
 // ربط الـ Routes
 // Connect the Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth',    authRoutes);
+app.use('/api/profile', profileRoutes);                               // ← NEW
 
 // ربط الـ Error Handler - يجب أن يكون آخر شيء دائماً
 // Connect Error Handler - must always be the last thing

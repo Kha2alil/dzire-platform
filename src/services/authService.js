@@ -4,7 +4,7 @@ const profileRepository = require('../repositories/profileRepository');
 const gamificationRepository = require('../repositories/gamificationRepository');
 const { generateToken, verifyToken } = require('../utils/tokenGenerator');
 const { sendVerificationEmail } = require('./emailService');
-const { validateSignup } = require('../validators/authValidator');
+const { validateSignup, validateLogin } = require('../validators/authValidator');
 
 /**
  * تسجيل مستخدم جديد
@@ -119,7 +119,74 @@ const verifyEmail = async (token) => {
     };
 };
 
+/**
+ * تسجيل دخول المستخدم
+ * Login user
+ *
+ * @param {Object} userData - الإيميل وكلمة المرور / Email and password
+ * @returns {Object} - token + بيانات المستخدم / token + user data
+ */
+const login = async (userData) => {
+
+    // الخطوة 1: تحقق من البيانات
+    // Step 1: Validate the data
+    const { valid, messages, value } = validateLogin(userData);
+    if (!valid) {
+        const error = new Error('بيانات غير صحيحة / Invalid data');
+        error.statusCode = 400;
+        error.messages = messages;
+        throw error;
+    }
+
+    // الخطوة 2: ابحث عن المستخدم بالإيميل
+    // Step 2: Find user by email
+    const user = await userRepository.findByEmail(value.email);
+    if (!user) {
+        const error = new Error('الإيميل أو كلمة المرور غير صحيحة / Invalid email or password');
+        error.statusCode = 401;
+        throw error;
+    }
+
+    // الخطوة 3: تحقق أن الحساب مفعّل
+    // Step 3: Check account is active
+    if (user.status !== 'active') {
+        const error = new Error('يرجى تفعيل حسابك أولاً / Please verify your email first');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    // الخطوة 4: تحقق من كلمة المرور
+    // Step 4: Check password is correct
+    const isPasswordValid = await bcrypt.compare(value.password, user.password_hash);
+    if (!isPasswordValid) {
+        const error = new Error('الإيميل أو كلمة المرور غير صحيحة / Invalid email or password');
+        error.statusCode = 401;
+        throw error;
+    }
+
+    // الخطوة 5: أنشئ JWT token
+    // Step 5: Generate JWT token
+    const token = generateToken(
+        { id: user.id, email: user.email, role: user.role },
+        '7d'
+    );
+
+    // الخطوة 6: أرجع التوكن وبيانات المستخدم
+    // Step 6: Return token and user data
+    return {
+        message: 'تم تسجيل الدخول بنجاح / Logged in successfully',
+        token,
+        user: {
+            id:        user.id,
+            full_name: user.full_name,
+            email:     user.email,
+            role:      user.role
+        }
+    };
+};
+
 module.exports = {
     signup,
-    verifyEmail
+    verifyEmail,
+    login
 };

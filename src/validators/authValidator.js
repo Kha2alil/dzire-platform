@@ -45,6 +45,36 @@ const validateSignup = (data) => {
     return { valid: true, value };
 };
 
+// schema التحقق من بيانات تسجيل الدخول
+// Login validation schema
+const loginSchema = Joi.object({
+
+    email: Joi.string()
+        .email()
+        .required(),
+
+    password: Joi.string()
+        .required()
+});
+
+/**
+ * التحقق من بيانات تسجيل الدخول
+ * Validate login data
+ */
+const validateLogin = (data) => {
+    const { error, value } = loginSchema.validate(data, { abortEarly: false });
+
+    if (error) {
+        const messages = error.details.map(detail => detail.message);
+        return { valid: false, messages };
+    }
+
+    return { valid: true, value };
+};
+
+
+
 module.exports = {
-    validateSignup
+    validateSignup,
+    validateLogin 
 };
