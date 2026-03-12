@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dzire API · Docs</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root {
+  --bg:       #060C1A;
+  --bg2:      #0A1225;
+  --bg3:      #0D1730;
+  --bg4:      #0F1B35;
+  --bghov:    #112040;
+  --b500:     #3B82F6;
+  --b400:     #60A5FA;
+  --b300:     #93C5FD;
+  --b600:     #2563EB;
+  --b800:     #1E40AF;
+  --border:   rgba(59,130,246,0.10);
+  --bordermd: rgba(59,130,246,0.22);
+  --text:     #E8F0FF;
+  --text2:    #A8BEDD;
+  --text3:    #5E7A9E;
+  --text4:    #3A5270;
+  --green:    #10B981;
+  --greendim: rgba(16,185,129,0.12);
+  --amber:    #F59E0B;
+  --amberdim: rgba(245,158,11,0.12);
+  --red:      #EF4444;
+  --reddim:   rgba(239,68,68,0.12);
+  --purple:   #A78BFA;
+  --mono:     'JetBrains Mono', monospace;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bordermd);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--b500)}
+
+/* ── Resizer ── */
+.resizer{width:5px;flex-shrink:0;background:var(--border);cursor:col-resize;transition:background .2s;user-select:none;position:relative}
+.resizer:hover,.resizer.active{background:var(--b500);box-shadow:0 0 8px rgba(59,130,246,.4)}
+
+/* ── P1 Tree ── */
+.p1{width:220px;min-width:150px;max-width:420px;flex-shrink:0;background:var(--bg2);display:flex;flex-direction:column;overflow:hidden}
+.p1-head{padding:13px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.logo-icon{width:26px;height:26px;background:linear-gradient(135deg,var(--b800),var(--b500));border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:12px;box-shadow:0 0 12px rgba(59,130,246,.3)}
+.logo-name{font-family:'Syne',sans-serif;font-weight:800;font-size:14px}
+.logo-name span{color:var(--b400)}
+.p1-ver{margin-left:auto;font-size:9px;font-weight:700;background:var(--bg3);border:1px solid var(--bordermd);color:var(--b400);padding:2px 7px;border-radius:10px}
+.p1-search{padding:8px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.p1-search input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:5px 9px;font-size:11px;font-family:'DM Sans',sans-serif;color:var(--text2);outline:none}
+.p1-search input:focus{border-color:var(--bordermd)}
+.p1-search input::placeholder{color:var(--text4)}
+.p1-tree{flex:1;overflow-y:auto;padding:6px 0}
+
+.coll-hdr{display:flex;align-items:center;gap:6px;padding:6px 12px;cursor:pointer;color:var(--text3);font-size:11px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;transition:all .15s;user-select:none}
+.coll-hdr:hover{background:var(--bghov);color:var(--text2)}
+.coll-arr{font-size:8px;transition:transform .2s}
+.coll-arr.o{transform:rotate(90deg)}
+.coll-lbl{flex:1}
+.soon-tag{font-size:9px;color:var(--text4);font-weight:600;letter-spacing:.5px}
+
+.coll-items{display:none}
+.coll-items.o{display:block}
+
+.t-item{display:flex;align-items:center;gap:6px;padding:5px 10px 5px 20px;cursor:pointer;font-size:11.5px;color:var(--text4);transition:all .15s;border-left:2px solid transparent}
+.t-item:hover{background:var(--bghov);color:var(--text2)}
+.t-item.active{background:rgba(59,130,246,.07);color:var(--b400);border-left-color:var(--b500)}
+
+.mb{font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;flex-shrink:0;min-width:32px;text-align:center}
+.mb.GET   {background:var(--greendim);color:var(--green);border:1px solid rgba(16,185,129,.2)}
+.mb.POST  {background:rgba(59,130,246,.12);color:var(--b400);border:1px solid var(--bordermd)}
+.mb.PATCH {background:var(--amberdim);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+.mb.DELETE{background:var(--reddim);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.t-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lock-sm{font-size:9px;color:var(--amber)}
+
+/* ── P2 Request ── */
+.p2{width:320px;min-width:220px;max-width:560px;flex-shrink:0;background:var(--bg3);display:flex;flex-direction:column;overflow:hidden}
+.p2-top{padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.ep-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.ep-method{font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 9px;border-radius:4px}
+.ep-method.GET   {background:var(--greendim);color:var(--green);border:1px solid rgba(16,185,129,.25)}
+.ep-method.POST  {background:rgba(59,130,246,.12);color:var(--b400);border:1px solid var(--bordermd)}
+.ep-method.PATCH {background:var(--amberdim);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.ep-method.DELETE{background:var(--reddim);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+.ep-path{font-family:var(--mono);font-size:11.5px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ep-desc{font-size:11.5px;color:var(--text3);line-height:1.5}
+
+.p2-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;padding:0 14px}
+.tab{font-size:11px;font-weight:600;color:var(--text4);padding:7px 10px;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;letter-spacing:.3px}
+.tab:hover{color:var(--text3)}
+.tab.on{color:var(--b400);border-bottom-color:var(--b500)}
+
+.p2-body{flex:1;overflow-y:auto;padding:14px}
+.sec-title{font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text4);margin-bottom:7px;margin-top:14px}
+.sec-title:first-child{margin-top:0}
+
+.ptable{width:100%;border-collapse:collapse}
+.ptable th{font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text4);padding:5px 7px;border-bottom:1px solid var(--border);text-align:left}
+.ptable td{padding:7px 7px;font-size:11px;border-bottom:1px solid rgba(59,130,246,.05);vertical-align:top}
+.ptable tr:last-child td{border-bottom:none}
+.ptable tr:hover td{background:rgba(59,130,246,.03)}
+.pn{font-family:var(--mono);font-size:10px;color:var(--b300)}
+.pt{font-family:var(--mono);font-size:9px;color:var(--purple)}
+.pr{font-size:9px;font-weight:700;color:var(--red)}
+.po{font-size:9px;color:var(--text4)}
+.pd{font-size:11px;color:var(--text3);line-height:1.4}
+
+.base-bar{background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:7px 10px;font-family:var(--mono);font-size:10.5px;color:var(--text3)}
+.base-bar span{color:var(--b400)}
+
+.auth-chip{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;padding:3px 9px;border-radius:4px;background:var(--amberdim);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+
+.steps{display:flex;flex-direction:column;gap:5px}
+.step{display:flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--text3);line-height:1.5}
+.sn{width:17px;height:17px;border-radius:50%;background:rgba(59,130,246,.1);border:1px solid var(--bordermd);color:var(--b400);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+
+.db-row{display:flex;flex-direction:column;gap:6px}
+.db-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px;display:flex;gap:10px}
+.db-ico{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.db-ico.bl{background:rgba(59,130,246,.12);color:var(--b400);border:1px solid var(--bordermd)}
+.db-ico.gr{background:var(--greendim);color:var(--green);border:1px solid rgba(16,185,129,.2)}
+.db-ico.pu{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.2)}
+.db-tname{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text);margin-bottom:2px}
+.db-trig{font-size:9px;color:var(--text4);margin-bottom:4px}
+.db-ftags{display:flex;flex-wrap:wrap;gap:3px}
+.ftag{font-family:var(--mono);font-size:9px;background:var(--bg4);border:1px solid var(--border);color:var(--text3);padding:1px 5px;border-radius:3px}
+
+/* ── P3 Response ── */
+.p3{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);position:relative}
+.p3::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(59,130,246,.04) 1px,transparent 1px);background-size:28px 28px;pointer-events:none}
+.p3>*{position:relative;z-index:1}
+
+.p3-top{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.p3-ttl{font-family:'Syne',sans-serif;font-size:13px;font-weight:700}
+.p3-meta{display:flex;align-items:center;gap:8px}
+.spill{font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px}
+.spill.ok {background:var(--greendim);color:var(--green);border:1px solid rgba(16,185,129,.25)}
+.spill.err{background:var(--reddim);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+.spill.warn{background:var(--amberdim);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.tpill{font-family:var(--mono);font-size:10px;color:var(--text4);background:var(--bg3);border:1px solid var(--border);padding:3px 9px;border-radius:10px}
+
+.p3-tabs{display:flex;border-bottom:1px solid var(--border);padding:0 18px;flex-shrink:0}
+.p3-body{flex:1;overflow-y:auto;padding:18px}
+
+.code-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:7px;overflow:hidden}
+.ctoolbar{display:flex;align-items:center;justify-content:space-between;padding:7px 14px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.25)}
+.ctleft{display:flex;align-items:center;gap:7px}
+.cdots{display:flex;gap:4px}
+.cdot{width:9px;height:9px;border-radius:50%}
+.cdot.r{background:#EF4444;opacity:.6}
+.cdot.y{background:#F59E0B;opacity:.6}
+.cdot.g{background:#10B981;opacity:.6}
+.clang{font-size:9px;font-weight:700;letter-spacing:.5px;color:var(--text4);text-transform:uppercase}
+.cpbtn{font-size:10px;color:var(--text4);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;font-family:'DM Sans',sans-serif;transition:color .15s;padding:2px 5px;border-radius:3px}
+.cpbtn:hover{color:var(--b400);background:rgba(59,130,246,.08)}
+pre{padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12px;line-height:1.8;color:var(--text2)}
+.jk{color:var(--b300)}
+.js{color:var(--green)}
+.jn{color:var(--amber)}
+.jb{color:var(--purple)}
+.jc{color:var(--text4);font-style:italic}
+.ju{color:var(--b400)}
+
+.notice{display:flex;align-items:flex-start;gap:7px;padding:9px 12px;border-radius:5px;font-size:11px;line-height:1.6;margin-bottom:10px}
+.notice.warn{background:var(--amberdim);border:1px solid rgba(245,158,11,.2);color:var(--amber)}
+.notice.info{background:rgba(59,130,246,.07);border:1px solid var(--bordermd);color:var(--b300)}
+.notice.ok  {background:var(--greendim);border:1px solid rgba(16,185,129,.2);color:var(--green)}
+.notice i{font-size:10px;margin-top:2px;flex-shrink:0}
+
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:40px}
+.w-icon{font-size:40px;margin-bottom:16px;opacity:.2}
+.welcome h2{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:6px;color:var(--text);opacity:.5}
+.welcome p{font-size:12px;color:var(--text4);max-width:240px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<!-- P1 -->
+<div class="p1">
+  <div class="p1-head">
+    <div class="logo-icon">D</div>
+    <div class="logo-name">D<span>zire</span></div>
+    <span class="p1-ver">v2.0</span>
+  </div>
+  <div class="p1-search">
+    <input type="text" placeholder="Search endpoints..." oninput="filterTree(this.value)">
+  </div>
+  <div class="p1-tree" id="tree">
+
+    <div class="tree-collection">
+      <div class="coll-hdr" onclick="toggleColl(this)">
+        <span class="coll-arr o">▶</span>
+        <span>🔐</span>
+        <span class="coll-lbl">Auth</span>
+      </div>
+      <div class="coll-items o">
+        <div class="t-item active" onclick="load('signup')" data-key="signup">
+          <span class="mb POST">POST</span><span class="t-name">auth/signup</span>
+        </div>
+        <div class="t-item" onclick="load('verify')" data-key="verify">
+          <span class="mb GET">GET</span><span class="t-name">auth/verify-email</span>
+        </div>
+        <div class="t-item" onclick="load('login')" data-key="login">
+          <span class="mb POST">POST</span><span class="t-name">auth/login</span>
+        </div>
+        <div class="t-item" onclick="load('me')" data-key="me">
+          <span class="mb GET">GET</span><span class="t-name">auth/me</span>
+          <span class="lock-sm">🔒</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tree-collection" style="opacity:.3;pointer-events:none">
+      <div class="coll-hdr"><span class="coll-arr">▶</span><span>👤</span><span class="coll-lbl">Profile</span><span class="soon-tag">SOON</span></div>
+    </div>
+    <div class="tree-collection" style="opacity:.3;pointer-events:none">
+      <div class="coll-hdr"><span class="coll-arr">▶</span><span>📚</span><span class="coll-lbl">Courses</span><span class="soon-tag">SOON</span></div>
+    </div>
+    <div class="tree-collection" style="opacity:.3;pointer-events:none">
+      <div class="coll-hdr"><span class="coll-arr">▶</span><span>⚡</span><span class="coll-lbl">Gamification</span><span class="soon-tag">SOON</span></div>
+    </div>
+    <div class="tree-collection" style="opacity:.3;pointer-events:none">
+      <div class="coll-hdr"><span class="coll-arr">▶</span><span>🔔</span><span class="coll-lbl">Notifications</span><span class="soon-tag">SOON</span></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="resizer" id="r1"></div>
+<!-- P2 -->
+<div class="p2">
+  <div id="p2c" style="display:flex;flex-direction:column;height:100%"></div>
+</div>
+
+<div class="resizer" id="r2"></div>
+<!-- P3 -->
+<div class="p3">
+  <div class="welcome" id="ws">
+    <div class="w-icon">⚡</div>
+    <h2>Dzire API Explorer</h2>
+    <p>Select an endpoint from the left to view documentation and responses.</p>
+  </div>
+  <div id="p3c" style="display:none;flex-direction:column;height:100%"></div>
+</div>
+
+<script>
+const EP = {
+  signup:{
+    method:'POST',path:'/api/auth/signup',
+    desc:'Register a new student or teacher. Sends a verification email automatically.',
+    protected:false,
+    params:[
+      {name:'full_name',type:'string',req:true,desc:'Min 2, max 100 characters'},
+      {name:'email',type:'string',req:true,desc:'Valid email — must be unique'},
+      {name:'password',type:'string',req:true,desc:'Minimum 8 characters'},
+      {name:'role',type:'string',req:true,desc:'"student" or "teacher"'},
+    ],
+    bodyLang:'JSON',
+    body:`{
+  <span class="jk">"full_name"</span>: <span class="js">"Ahmed Ali"</span>,
+  <span class="jk">"email"</span>:     <span class="js">"ahmed@example.com"</span>,
+  <span class="jk">"password"</span>: <span class="js">"Ahmed123!"</span>,
+  <span class="jk">"role"</span>:     <span class="js">"student"</span>
+}`,
+    steps:[
+      'Input validation (Joi) — checks all fields and role value',
+      'Email uniqueness check — returns 409 if taken',
+      'Password hashing — bcrypt cost factor 12',
+      'JWT verification token generated — expires in 24h',
+      'User record created — status: pending_verification',
+      'Empty profile row created in profiles table',
+      'Gamification stats created — students only',
+      'Verification email sent via Gmail SMTP',
+    ],
+    responses:{
+      '201 Created':{sc:'ok',body:`{
+  <span class="jk">"success"</span>: <span class="jb">true</span>,
+  <span class="jk">"message"</span>: <span class="js">"Signed up successfully, check your email"</span>,
+  <span class="jk">"email"</span>:   <span class="js">"ahmed@example.com"</span>
+}`},
+      '400 Bad Request':{sc:'err',body:`{
+  <span class="jk">"success"</span>:  <span class="jb">false</span>,
+  <span class="jk">"messages"</span>: [
+    <span class="js">"email must be a valid email"</span>,
+    <span class="js">"password must be at least 8 characters"</span>
+  ]
+}`},
+      '409 Conflict':{sc:'err',body:`{
+  <span class="jk">"success"</span>: <span class="jb">false</span>,
+  <span class="jk">"message"</span>: <span class="js">"Email already exists"</span>
+}`},
+    },
+    db:[
+      {ico:'fa-user',cls:'bl',table:'users',trigger:'Always on signup',fields:['id (UUID)','email','password_hash','status: pending','verification_token']},
+      {ico:'fa-id-card',cls:'gr',table:'profiles',trigger:'Always on signup',fields:['user_id','avatar_url: NULL','bio: NULL']},
+      {ico:'fa-star',cls:'pu',table:'gamification_stats',trigger:'Students only',fields:['student_id','total_xp: 0','current_level: 1']},
+    ],
+    notices:[],
+  },
+
+  verify:{
+    method:'GET',path:'/api/auth/verify-email',
+    desc:'Activate account via the JWT token sent by email. Token expires after 24 hours.',
+    protected:false,
+    params:[
+      {name:'token',type:'query string',req:true,desc:'JWT from the verification email — expires 24h'},
+    ],
+    bodyLang:'URL',
+    body:`GET /api/auth/verify-email?token=<span class="ju">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...</span>`,
+    steps:[
+      'JWT token validated and decoded',
+      'User looked up by email from token payload',
+      'Check account is not already active',
+      'Status updated: pending_verification → active',
+      'verification_token cleared from DB',
+    ],
+    responses:{
+      '200 OK':{sc:'ok',body:`{
+  <span class="jk">"success"</span>: <span class="jb">true</span>,
+  <span class="jk">"message"</span>: <span class="js">"Account activated successfully"</span>
+}`},
+      '400 Bad Request':{sc:'err',body:`{
+  <span class="jk">"success"</span>: <span class="jb">false</span>,
+  <span class="jk">"message"</span>: <span class="js">"Account already active"</span>
+}`},
+      '401 Unauthorized':{sc:'err',body:`{
+  <span class="jk">"success"</span>: <span class="jb">false</span>,
+  <span class="jk">"message"</span>: <span class="js">"Invalid or expired token"</span>
+}`},
+      '404 Not Found':{sc:'err',body:`{
+  <span class="jk">"success"</span>: <span class="jb">false</span>,
+  <span class="jk">"message"</span>: <span class="js">"User not found"</span>
+}`},
+    },
+    db:[],notices:[],
+  },
+
+  login:{
+    method:'POST',path:'/api/auth/login',
+    desc:'Login with email and password. Returns a JWT token valid for 7 days.',
+    protected:false,
+    params:[
+      {name:'email',type:'string',req:true,desc:'Registered and verified email address'},
+      {name:'password',type:'string',req:true,desc:'Account password'},
+    ],
+    bodyLang:'JSON',
+    body:`{
+  <span class="jk">"email"</span>:    <span class="js">"ahmed@example.com"</span>,
+  <span class="jk">"password"</span>: <span class="js">"Ahmed123!"</span>
+}`,
+    steps:[
+      'Joi validation — email format + password presence',
+      'User looked up by email in DB',
+      'Account status checked — must be active',
+      'Password verified against bcrypt hash',
+      'JWT generated with id, email, role — expires 7 days',
+      'Token + user data returned to client',
+    ],
+    responses:{
+      '200 OK':{sc:'ok',body:`{
+  <span class="jk">"success"</span>: <span class="jb">true</span>,
+  <span class="jk">"message"</span>: <span class="js">"Logged in successfully"</span>,
+  <span class="jk">"token"</span>:   <span class="js">"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."</span>,
+  <span class="jk">"user"</span>: {
+    <span class="jk">"id"</span>:        <span class="js">"278c6451-1ded-11f1-b5c6-..."</span>,
+    <span class="jk">"full_name"</span>: <span class="js">"Ahmed Ali"</span>,
+    <span class="jk">"email"</span>:     <span class="js">"ahmed@example.com"</span>,
+    <span class="jk">"role"</span>:      <span class="js">"student"</span>
+  }
+}`},
+      '401 Unauthorized':{sc:'err',body:`{
+  <span class="jk">"success"</span>: <span class="jb">false</span>,
+  <span class="jk">"message"</span>: <span class="js">"Invalid email or password"</span>
+}`},
+      '403 Forbidden':{sc:'err',body:`{
+  <span class="jk">"success"</span>: <span class="jb">false</span>,
+  <span class="jk">"message"</span>: <span class="js">"Please verify your email first"</span>
+}`},
+    },
+    db:[],
+    notices:[{type:'warn',icon:'fa-shield-halved',text:'Both wrong email and wrong password return 401 — never reveal which failed.'}],
+  },
+
+  me:{
+    method:'GET',path:'/api/auth/me',
+    desc:'Get the currently logged-in user\'s full data. Protected — requires JWT token.',
+    protected:true,
+    params:[
+      {name:'Authorization',type:'header',req:true,desc:'Bearer TOKEN — JWT from the login response'},
+    ],
+    bodyLang:'HEADER',
+    body:`Authorization: Bearer <span class="ju">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...</span>`,
+    steps:[
+      'authMiddleware reads Authorization header',
+      'Token verified and decoded → id, email, role',
+      'User fetched from DB using id from token',
+      'Full user object returned',
+    ],
+    responses:{
+      '200 OK':{sc:'ok',body:`{
+  <span class="jk">"success"</span>: <span class="jb">true</span>,
+  <span class="jk">"user"</span>: {
+    <span class="jk">"id"</span>:         <span class="js">"278c6451-1ded-11f1-b5c6-..."</span>,
+    <span class="jk">"full_name"</span>:  <span class="js">"Ahmed Ali"</span>,
+    <span class="jk">"email"</span>:      <span class="js">"ahmed@example.com"</span>,
+    <span class="jk">"role"</span>:       <span class="js">"student"</span>,
+    <span class="jk">"status"</span>:     <span class="js">"active"</span>,
+    <span class="jk">"created_at"</span>: <span class="js">"2026-03-12T08:26:23.000Z"</span>
+  }
+}`},
+      '401 Unauthorized':{sc:'err',body:`{
+  <span class="jk">"success"</span>: <span class="jb">false</span>,
+  <span class="jk">"message"</span>: <span class="js">"No token provided"</span>
+}`},
+      '404 Not Found':{sc:'err',body:`{
+  <span class="jk">"success"</span>: <span class="jb">false</span>,
+  <span class="jk">"message"</span>: <span class="js">"User not found"</span>
+}`},
+    },
+    db:[],
+    notices:[{type:'info',icon:'fa-lock',text:'Protected route — include the JWT from login as: Authorization: Bearer TOKEN'}],
+  },
+};
+
+let cur='signup', p2tab='params', p3tab='';
+
+function load(key){
+  cur=key; p2tab='params';
+  const ep=EP[key];
+  p3tab=Object.keys(ep.responses)[0];
+  document.querySelectorAll('.t-item').forEach(i=>i.classList.remove('active'));
+  const el=document.querySelector(`.t-item[data-key="${key}"]`);
+  if(el)el.classList.add('active');
+  renderP2(); renderP3();
+}
+
+function renderP2(){
+  const ep=EP[cur];
+  const tabs=[{id:'params',lbl:'Params'},{id:'body',lbl:ep.method==='GET'?'Request':'Body'},{id:'steps',lbl:'Flow'},{id:'db',lbl:'DB'}];
+  const tabsH=tabs.map(t=>`<div class="tab ${p2tab===t.id?'on':''}" onclick="sp2('${t.id}')">${t.lbl}</div>`).join('');
+
+  let body='';
+  if(p2tab==='params'){
+    body+=`<div class="sec-title">Parameters</div>`;
+    if(!ep.params.length) body+=`<div style="color:var(--text4);font-size:11px">No parameters.</div>`;
+    else body+=`<table class="ptable"><thead><tr><th>Name</th><th>Type</th><th>Req</th><th>Description</th></tr></thead><tbody>
+      ${ep.params.map(p=>`<tr><td class="pn">${p.name}</td><td class="pt">${p.type}</td><td class="${p.req?'pr':'po'}">${p.req?'✓':'opt'}</td><td class="pd">${p.desc}</td></tr>`).join('')}
+    </tbody></table>`;
+    body+=`<div class="sec-title">Base URL</div><div class="base-bar"><span>http://localhost:3000</span>${ep.path}</div>`;
+    if(ep.protected) body+=`<div class="sec-title">Auth</div><span class="auth-chip"><i class="fa-solid fa-lock"></i> Bearer Token required</span>`;
+  }
+  if(p2tab==='body'){
+    body=`<div class="sec-title">${ep.bodyLang==='JSON'?'Request Body':'Request'}</div>
+    <div class="code-wrap"><div class="ctoolbar"><div class="ctleft"><div class="cdots"><div class="cdot r"></div><div class="cdot y"></div><div class="cdot g"></div></div><span class="clang">${ep.bodyLang}</span></div><button class="cpbtn" onclick="cp(this)"><i class="fa-regular fa-copy"></i> Copy</button></div><pre>${ep.body}</pre></div>`;
+  }
+  if(p2tab==='steps'){
+    body=`<div class="sec-title">Request Flow</div><div class="steps">${ep.steps.map((s,i)=>`<div class="step"><div class="sn">${i+1}</div><div>${s}</div></div>`).join('')}</div>`;
+  }
+  if(p2tab==='db'){
+    if(!ep.db.length) body=`<div style="color:var(--text4);font-size:11px;padding:4px 0">No DB changes on this endpoint.</div>`;
+    else body=`<div class="sec-title">Tables Affected</div><div class="db-row">${ep.db.map(d=>`
+      <div class="db-card">
+        <div class="db-ico ${d.cls}"><i class="fa-solid ${d.ico}"></i></div>
+        <div><div class="db-tname">${d.table}</div><div class="db-trig">${d.trigger}</div>
+        <div class="db-ftags">${d.fields.map(f=>`<span class="ftag">${f}</span>`).join('')}</div></div>
+      </div>`).join('')}</div>`;
+  }
+
+  document.getElementById('p2c').innerHTML=`
+    <div class="p2-top">
+      <div class="ep-row"><span class="ep-method ${ep.method}">${ep.method}</span><span class="ep-path">${ep.path}</span></div>
+      <div class="ep-desc">${ep.desc}</div>
+    </div>
+    <div class="p2-tabs">${tabsH}</div>
+    <div class="p2-body">${body}</div>`;
+}
+
+function renderP3(){
+  const ep=EP[cur];
+  const rkeys=Object.keys(ep.responses);
+  const tabsH=rkeys.map(k=>`<div class="tab ${p3tab===k?'on':''}" onclick="sp3('${k}')">${k}</div>`).join('');
+  const res=ep.responses[p3tab];
+  const scCls=res.sc==='ok'?'ok':res.sc==='warn'?'warn':'err';
+  const noticesH=(ep.notices||[]).map(n=>`<div class="notice ${n.type}"><i class="fa-solid ${n.icon}"></i><div>${n.text}</div></div>`).join('');
+
+  document.getElementById('ws').style.display='none';
+  const p3c=document.getElementById('p3c');
+  p3c.style.display='flex';
+  p3c.innerHTML=`
+    <div class="p3-top">
+      <div class="p3-ttl">${ep.method} ${ep.path}</div>
+      <div class="p3-meta">
+        <span class="spill ${scCls}">${p3tab}</span>
+        <span class="tpill">~38 ms</span>
+      </div>
+    </div>
+    <div class="p3-tabs">${tabsH}</div>
+    <div class="p3-body">
+      ${noticesH}
+      <div class="code-wrap">
+        <div class="ctoolbar">
+          <div class="ctleft"><div class="cdots"><div class="cdot r"></div><div class="cdot y"></div><div class="cdot g"></div></div><span class="clang">JSON</span></div>
+          <button class="cpbtn" onclick="cp(this)"><i class="fa-regular fa-copy"></i> Copy</button>
+        </div>
+        <pre>${res.body}</pre>
+      </div>
+    </div>`;
+}
+
+function sp2(t){p2tab=t;renderP2()}
+function sp3(t){p3tab=t;renderP3()}
+
+function toggleColl(hdr){
+  const arr=hdr.querySelector('.coll-arr');
+  const items=hdr.nextElementSibling;
+  if(!items)return;
+  arr.classList.toggle('o');
+  items.classList.toggle('o');
+}
+
+function cp(btn){
+  const pre=btn.closest('.code-wrap').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(()=>{
+    btn.innerHTML='<i class="fa-solid fa-check"></i> Copied!';
+    btn.style.color='var(--green)';
+    setTimeout(()=>{btn.innerHTML='<i class="fa-regular fa-copy"></i> Copy';btn.style.color='';},2000);
+  });
+}
+
+function filterTree(v){
+  v=v.toLowerCase();
+  document.querySelectorAll('.t-item').forEach(i=>{
+    i.style.display=(!v||i.dataset.key.includes(v)||i.querySelector('.t-name').textContent.includes(v))?'flex':'none';
+  });
+}
+
+// ═══════════════════════════════
+// PANEL RESIZE
+// ═══════════════════════════════
+function makeResizer(resizerId, panelId, side){
+  const resizer = document.getElementById(resizerId);
+  const panel   = document.getElementById ? document.querySelector('.'+panelId) : null;
+  if(!resizer) return;
+  let startX, startW;
+
+  resizer.addEventListener('mousedown', e => {
+    startX = e.clientX;
+    const p = resizer.previousElementSibling;
+    startW = p.offsetWidth;
+    resizer.classList.add('active');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMove = e => {
+      const dx  = e.clientX - startX;
+      const newW = Math.min(Math.max(startW + dx, parseInt(getComputedStyle(p).minWidth)||150), parseInt(getComputedStyle(p).maxWidth)||600);
+      p.style.width = newW + 'px';
+    };
+    const onUp = () => {
+      resizer.classList.remove('active');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+}
+
+makeResizer('r1','p1');
+makeResizer('r2','p2');
+
+load('signup');
+</script>
+</body>
+</html>
