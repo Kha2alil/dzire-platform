@@ -53,20 +53,62 @@ const findByUserId = async (userId) => {
             user_id,
             avatar_url,
             bio,
-            date_of_birth,
-            created_at
+            preferences,
+            updated_at
         FROM profiles
         WHERE user_id = ?
         LIMIT 1
     `;
-
+    
     const [rows] = await db.query(query, [userId]);
 
     return rows[0] || null;
 };
 
+/**
+ * تحديث الملف الشخصي
+ * Update profile data
+ *
+ * @param {string} userId - ID المستخدم / User ID
+ * @param {Object} data   - البيانات المراد تحديثها / Data to update
+ * @returns {boolean}     - true إذا نجح التحديث / true if update succeeded
+ */
+const updateProfile = async (userId, data) => {
+
+    // نبني الـ query ديناميكياً بناءً على البيانات المُرسلة
+    // Build query dynamically based on sent data
+    const fields = [];
+    const values = [];
+
+    if (data.bio !== undefined) {
+        fields.push('bio = ?');
+        values.push(data.bio);
+    }
+
+    if (data.avatar_url !== undefined) {
+        fields.push('avatar_url = ?');
+        values.push(data.avatar_url);
+    }
+
+    // If no data to update — return immediately
+    if (fields.length === 0) return false;
+
+    values.push(userId);
+
+    const query = `
+        UPDATE profiles
+        SET ${fields.join(', ')}
+        WHERE user_id = ?
+    `;
+
+    const [result] = await db.query(query, values);
+
+    return result.affectedRows > 0;
+};
+
 // Exports — تصدير جميع الدوال
 module.exports = {
     createProfile,
-    findByUserId
+    findByUserId,
+    updateProfile 
 };

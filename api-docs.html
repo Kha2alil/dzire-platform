@@ -186,7 +186,7 @@ pre{padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12px;lin
   <div class="p1-head">
     <div class="logo-icon">D</div>
     <div class="logo-name">D<span>zire</span></div>
-    <span class="p1-ver">v2.0</span>
+    <span class="p1-ver">v3.0</span>
   </div>
   <div class="p1-search">
     <input type="text" placeholder="Search endpoints..." oninput="filterTree(this.value)">
@@ -216,8 +216,22 @@ pre{padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12px;lin
       </div>
     </div>
 
-    <div class="tree-collection" style="opacity:.3;pointer-events:none">
-      <div class="coll-hdr"><span class="coll-arr">▶</span><span>👤</span><span class="coll-lbl">Profile</span><span class="soon-tag">SOON</span></div>
+    <div class="tree-collection">
+      <div class="coll-hdr" onclick="toggleColl(this)">
+        <span class="coll-arr o">▶</span>
+        <span>👤</span>
+        <span class="coll-lbl">Profile</span>
+      </div>
+      <div class="coll-items o">
+        <div class="t-item" onclick="load('getProfile')" data-key="getProfile">
+          <span class="mb GET">GET</span><span class="t-name">profile/me</span>
+          <span class="lock-sm">🔒</span>
+        </div>
+        <div class="t-item" onclick="load('updateProfile')" data-key="updateProfile">
+          <span class="mb PATCH">PATCH</span><span class="t-name">profile/me</span>
+          <span class="lock-sm">🔒</span>
+        </div>
+      </div>
     </div>
     <div class="tree-collection" style="opacity:.3;pointer-events:none">
       <div class="coll-hdr"><span class="coll-arr">▶</span><span>📚</span><span class="coll-lbl">Courses</span><span class="soon-tag">SOON</span></div>
@@ -425,6 +439,99 @@ const EP = {
     },
     db:[],
     notices:[{type:'info',icon:'fa-lock',text:'Protected route — include the JWT from login as: Authorization: Bearer TOKEN'}],
+  },
+
+  getProfile:{
+    method:'GET',path:'/api/profile/me',
+    desc:'Get the currently logged-in user\'s full profile. Protected — requires JWT token.',
+    protected:true,
+    params:[
+      {name:'Authorization',type:'header',req:true,desc:'Bearer TOKEN — JWT from the login response'},
+    ],
+    bodyLang:'HEADER',
+    body:`Authorization: Bearer <span class="ju">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...</span>`,
+    steps:[
+      'authMiddleware reads and verifies JWT token',
+      'req.user.id extracted from token payload',
+      'Profile fetched from DB using user_id',
+      'Full profile object returned',
+    ],
+    responses:{
+      '200 OK':{sc:'ok',body:`{
+  <span class="jk">"success"</span>: <span class="jb">true</span>,
+  <span class="jk">"profile"</span>: {
+    <span class="jk">"id"</span>:          <span class="js">"278e0907-1ded-11f1-b5c6-..."</span>,
+    <span class="jk">"user_id"</span>:     <span class="js">"278c6451-1ded-11f1-b5c6-..."</span>,
+    <span class="jk">"avatar_url"</span>:  <span class="jb">null</span>,
+    <span class="jk">"bio"</span>:         <span class="js">"I love coding!"</span>,
+    <span class="jk">"preferences"</span>: <span class="jb">null</span>,
+    <span class="jk">"updated_at"</span>:  <span class="js">"2026-03-12T09:54:16.000Z"</span>
+  }
+}`},
+      '401 Unauthorized':{sc:'err',body:`{
+  <span class="jk">"success"</span>: <span class="jb">false</span>,
+  <span class="jk">"message"</span>: <span class="js">"No token provided"</span>
+}`},
+      '404 Not Found':{sc:'err',body:`{
+  <span class="jk">"success"</span>: <span class="jb">false</span>,
+  <span class="jk">"message"</span>: <span class="js">"Profile not found"</span>
+}`},
+    },
+    db:[],
+    notices:[{type:'info',icon:'fa-lock',text:'Protected route — include the JWT from login as: Authorization: Bearer TOKEN'}],
+  },
+
+  updateProfile:{
+    method:'PATCH',path:'/api/profile/me',
+    desc:'Update the currently logged-in user\'s profile. Send only the fields you want to change.',
+    protected:true,
+    params:[
+      {name:'Authorization',type:'header',req:true,desc:'Bearer TOKEN — JWT from the login response'},
+      {name:'bio',type:'string',req:false,desc:'Max 500 characters'},
+      {name:'avatar_url',type:'string',req:false,desc:'Must be a valid URL (https://...)'},
+    ],
+    bodyLang:'JSON',
+    body:`{
+  <span class="jk">"bio"</span>: <span class="js">"I love coding!"</span>
+}`,
+    steps:[
+      'authMiddleware reads and verifies JWT token',
+      'validateRequest checks body — at least one field required',
+      'profileService validates bio max length and avatar_url format',
+      'Dynamic UPDATE query — only updates sent fields',
+      'Updated profile fetched and returned',
+    ],
+    responses:{
+      '200 OK':{sc:'ok',body:`{
+  <span class="jk">"success"</span>: <span class="jb">true</span>,
+  <span class="jk">"message"</span>: <span class="js">"Profile updated successfully"</span>,
+  <span class="jk">"profile"</span>: {
+    <span class="jk">"id"</span>:          <span class="js">"278e0907-1ded-11f1-b5c6-..."</span>,
+    <span class="jk">"user_id"</span>:     <span class="js">"278c6451-1ded-11f1-b5c6-..."</span>,
+    <span class="jk">"avatar_url"</span>:  <span class="jb">null</span>,
+    <span class="jk">"bio"</span>:         <span class="js">"I love coding!"</span>,
+    <span class="jk">"preferences"</span>: <span class="jb">null</span>,
+    <span class="jk">"updated_at"</span>:  <span class="js">"2026-03-12T09:54:16.000Z"</span>
+  }
+}`},
+      '400 Bad Request':{sc:'err',body:`{
+  <span class="jk">"success"</span>:  <span class="jb">false</span>,
+  <span class="jk">"messages"</span>: [
+    <span class="js">"At least one field is required"</span>
+  ]
+}`},
+      '401 Unauthorized':{sc:'err',body:`{
+  <span class="jk">"success"</span>: <span class="jb">false</span>,
+  <span class="jk">"message"</span>: <span class="js">"No token provided"</span>
+}`},
+    },
+    db:[
+      {ico:'fa-id-card',cls:'gr',table:'profiles',trigger:'Always on update',fields:['bio','avatar_url','updated_at']},
+    ],
+    notices:[
+      {type:'info',icon:'fa-lock',text:'Protected route — include the JWT from login as: Authorization: Bearer TOKEN'},
+      {type:'warn',icon:'fa-triangle-exclamation',text:'Send only the fields you want to update. Empty body {} returns 400.'},
+    ],
   },
 };
 
