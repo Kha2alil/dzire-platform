@@ -2,8 +2,9 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const authRoutes = require('./src/routes/authRoutes');
-const profileRoutes = require('./src/routes/profileRoutes');          // ← NEW
+const profileRoutes = require('./src/routes/profileRoutes');          
 const errorHandler = require('./src/middlewares/errorHandler');
+const gamificationRoutes = require('./src/routes/gamificationRoutes');
 
 // تحميل متغيرات البيئة من ملف .env
 // Load environment variables from .env file
@@ -24,7 +25,9 @@ app.use(express.json());
 // ربط الـ Routes
 // Connect the Routes
 app.use('/api/auth',    authRoutes);
-app.use('/api/profile', profileRoutes);                               // ← NEW
+app.use('/api/profile', profileRoutes);   
+
+app.use('/api/gamification', gamificationRoutes);  
 
 // ربط الـ Error Handler - يجب أن يكون آخر شيء دائماً
 // Connect Error Handler - must always be the last thing

@@ -135,9 +135,31 @@ const getMe = async (req, res, next) => {
     }
 };
 
+/**
+ * PATCH /api/auth/change-password
+ * تغيير كلمة مرور المستخدم الحالي
+ * Change current user's password
+ */
+const changePassword = async (req, res, next) => {
+
+    try {
+
+        const result = await authService.changePassword(req.user.id, req.body);
+
+        res.status(200).json({
+            success: true,
+            message: result.message
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     signup,
     verifyEmail,
     login,
-    getMe
+    getMe,
+    changePassword
 };

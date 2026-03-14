@@ -149,10 +149,54 @@ const updateVerificationStatus = async (userId) => {
     return result.affectedRows > 0;
 };
 
+/**
+ * تحديث الاسم الكامل للمستخدم
+ * Update user's full name
+ *
+ * @param {string} userId - ID المستخدم / User ID
+ * @param {string} fullName - الاسم الجديد / New full name
+ * @returns {boolean} - true إذا نجح التحديث / true if update succeeded
+ */
+const updateFullName = async (userId, fullName) => {
+
+    const query = `
+        UPDATE users
+        SET full_name = ?
+        WHERE id = ?
+    `;
+
+    const [result] = await db.query(query, [fullName, userId]);
+
+    return result.affectedRows > 0;
+};
+
+/**
+ * تحديث كلمة مرور المستخدم
+ * Update user's password
+ *
+ * @param {string} userId   - ID المستخدم / User ID
+ * @param {string} newHash  - الهاش الجديد لكلمة المرور / New password hash
+ * @returns {boolean} - true إذا نجح التحديث / true if update succeeded
+ */
+const updatePassword = async (userId, newHash) => {
+
+    const query = `
+        UPDATE users
+        SET password_hash = ?
+        WHERE id = ?
+    `;
+
+    const [result] = await db.query(query, [newHash, userId]);
+
+    return result.affectedRows > 0;
+};
+
 // Exports — تصدير جميع الدوال
 module.exports = {
     createUser,
     findByEmail,
     findById,
-    updateVerificationStatus
+    updateVerificationStatus,
+    updateFullName,
+    updatePassword
 };

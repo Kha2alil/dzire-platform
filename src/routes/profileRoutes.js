@@ -4,6 +4,7 @@ const profileController = require('../controllers/profileController');
 const authMiddleware    = require('../middlewares/authMiddleware');
 const validateRequest   = require('../middlewares/validateRequest');
 const { validateUpdateProfile } = require('../validators/profileValidator');
+const upload = require('../middlewares/uploadMiddleware'); 
 
 // كل الـ Routes تتطلب تسجيل دخول
 // All routes require authentication
@@ -14,5 +15,8 @@ router.get('/me', profileController.getProfile);
 
 // PATCH /api/profile/me ← update my profile
 router.patch('/me', validateRequest(validateUpdateProfile), profileController.updateProfile);
+
+// POST /api/profile/avatar ← upload avatar image
+router.post('/avatar', upload.single('avatar'), profileController.uploadAvatar);
 
 module.exports = router;

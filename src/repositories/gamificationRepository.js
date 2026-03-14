@@ -35,16 +35,16 @@ const createGamificationStats = async (userId, role) => {
 const findByUserId = async (userId) => {
 
     const query = `
-        SELECT
-            id,
-            student_id,
-            total_xp,
-            current_level,
-            rank,
-            updated_at
-        FROM gamification_stats
-        WHERE student_id = ?
-        LIMIT 1
+    SELECT
+        id,
+        student_id,
+        total_xp,
+        current_level,
+        \`rank\`,
+        updated_at
+    FROM gamification_stats
+    WHERE student_id = ?
+    LIMIT 1
     `;
 
     const [rows] = await db.query(query, [userId]);

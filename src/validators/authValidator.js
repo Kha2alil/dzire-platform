@@ -72,9 +72,33 @@ const validateLogin = (data) => {
     return { valid: true, value };
 };
 
+// schema التحقق من بيانات تغيير كلمة المرور
+// Change password validation schema
+const changePasswordSchema = Joi.object({
+
+    current_password: Joi.string()
+        .required(),            // إجباري / required
+
+    new_password: Joi.string()
+        .min(8)                 // 8 أحرف على الأقل / at least 8 characters
+        .required()
+
+});
+
+const validateChangePassword = (data) => {
+    const { error, value } = changePasswordSchema.validate(data, { abortEarly: false });
+
+    if (error) {
+        const messages = error.details.map(detail => detail.message);
+        return { valid: false, messages };
+    }
+
+    return { valid: true, value };
+};
 
 
 module.exports = {
     validateSignup,
-    validateLogin 
+    validateLogin,
+    validateChangePassword
 };

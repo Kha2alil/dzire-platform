@@ -4,13 +4,28 @@ const Joi = require('joi');
 // Profile update validation schema
 const updateProfileSchema = Joi.object({
 
+    full_name: Joi.string()
+        .min(2)                  // حرفان على الأقل / at least 2 characters
+        .max(100)               // 100 حرف كحد أقصى / max 100 characters
+        .optional(),
+
     bio: Joi.string()
-        .max(500)                // 500 حرف كحد أقصى / max 500 characters
-        .optional(),             // اختياري / optional
+        .max(500)                    // 500 حرف كحد أقصى / max 500 characters
+        .optional(),                 // اختياري / optional
 
     avatar_url: Joi.string()
-        .uri()                   // يجب أن يكون رابط صحيح / must be a valid URL
-        .optional()
+        .uri()                    // يجب أن يكون رابط صحيح / must be a valid URL
+        .optional(),
+    
+    specialization: Joi.string()
+    .max(100)                       // 100 حرف كحد أقصى / max 100 characters
+    .optional(),
+
+    experience_years: Joi.number()
+        .integer()                  // رقم صحيح / integer only
+        .min(0)                     // لا يقل عن 0 / minimum 0
+        .max(50)                    // لا يزيد عن 50 / maximum 50
+        .optional()    
 
 }).min(1);                       // يجب أن يكون فيه حقل واحد على الأقل / at least one field required
 
@@ -38,6 +53,11 @@ const validateUpdateProfile = (data) => {
 
     return { valid: true, value };
 };
+
+
+
+
+
 module.exports = {
     validateUpdateProfile
 };

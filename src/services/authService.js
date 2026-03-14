@@ -4,7 +4,7 @@ const profileRepository = require('../repositories/profileRepository');
 const gamificationRepository = require('../repositories/gamificationRepository');
 const { generateToken, verifyToken } = require('../utils/tokenGenerator');
 const { sendVerificationEmail } = require('./emailService');
-const { validateSignup, validateLogin } = require('../validators/authValidator');
+const { validateSignup, validateLogin, validateChangePassword } = require('../validators/authValidator'); 
 
 /**
  * تسجيل مستخدم جديد
@@ -185,8 +185,59 @@ const login = async (userData) => {
     };
 };
 
+/**
+ * تغيير كلمة مرور المستخدم
+ * Change user's password
+ */
+const changePassword = async (userId, data) => {
+
+    // الخطوة 1: تحقق من البيانات
+    // Step 1: Validate the data
+    const { valid, messages, value } = validateChangePassword(data);
+    if (!valid) {
+        const error = new Error('بيانات غير صحيحة / Invalid data');
+        error.statusCode = 400;
+        error.messages = messages;
+        throw error;
+    }
+
+    // الخطوة 2: جلب المستخدم من DB للحصول على الهاش
+    // Step 2: Fetch user from DB to get the hash
+    const user = await userRepository.findById(userId);
+    if (!user) {
+        const error = new Error('المستخدم غير موجود / User not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    // الخطوة 3: تحقق من كلمة المرور الحالية
+    // Step 3: Verify current password
+    // ملاحظة: findById لا يجلب password_hash — نحتاج findByEmail
+    // Note: findById doesn't fetch password_hash — we need findByEmail
+    const fullUser = await userRepository.findByEmail(user.email);
+    const isValid  = await bcrypt.compare(value.current_password, fullUser.password_hash);
+    if (!isValid) {
+        const error = new Error('كلمة المرور الحالية غير صحيحة / Current password is incorrect');
+        error.statusCode = 401;
+        throw error;
+    }
+
+    // الخطوة 4: تشفير كلمة المرور الجديدة
+    // Step 4: Hash the new password
+    const newHash = await bcrypt.hash(value.new_password, 12);
+
+    // الخطوة 5: حفظ الهاش الجديد في DB
+    // Step 5: Save new hash in DB
+    await userRepository.updatePassword(userId, newHash);
+
+    return {
+        message: 'تم تغيير كلمة المرور بنجاح / Password changed successfully'
+    };
+};
+
 module.exports = {
     signup,
     verifyEmail,
-    login
+    login,
+    changePassword
 };

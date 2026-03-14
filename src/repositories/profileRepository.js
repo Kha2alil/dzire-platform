@@ -53,6 +53,8 @@ const findByUserId = async (userId) => {
             user_id,
             avatar_url,
             bio,
+            specialization,
+            experience_years,
             preferences,
             updated_at
         FROM profiles
@@ -90,6 +92,16 @@ const updateProfile = async (userId, data) => {
         values.push(data.avatar_url);
     }
 
+    if (data.specialization !== undefined) {
+        fields.push('specialization = ?');
+        values.push(data.specialization);
+    }
+
+    if (data.experience_years !== undefined) {
+        fields.push('experience_years = ?');
+        values.push(data.experience_years);
+    }
+
     // If no data to update — return immediately
     if (fields.length === 0) return false;
 
@@ -106,9 +118,31 @@ const updateProfile = async (userId, data) => {
     return result.affectedRows > 0;
 };
 
+/**
+ * تحديث رابط الصورة الشخصية
+ * Update user's avatar URL
+ *
+ * @param {string} userId    - ID المستخدم / User ID
+ * @param {string} avatarUrl - مسار الصورة الجديدة / New avatar path
+ * @returns {boolean} - true إذا نجح التحديث / true if update succeeded
+ */
+const updateAvatarUrl = async (userId, avatarUrl) => {
+
+    const query = `
+        UPDATE profiles
+        SET avatar_url = ?
+        WHERE user_id = ?
+    `;
+
+    const [result] = await db.query(query, [avatarUrl, userId]);
+
+    return result.affectedRows > 0;
+};
+
 // Exports — تصدير جميع الدوال
 module.exports = {
     createProfile,
     findByUserId,
-    updateProfile 
+    updateProfile,
+    updateAvatarUrl 
 };

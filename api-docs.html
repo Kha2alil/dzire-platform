@@ -186,7 +186,7 @@ pre{padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12px;lin
   <div class="p1-head">
     <div class="logo-icon">D</div>
     <div class="logo-name">D<span>zire</span></div>
-    <span class="p1-ver">v3.0</span>
+    <span class="p1-ver">v4.0</span>
   </div>
   <div class="p1-search">
     <input type="text" placeholder="Search endpoints..." oninput="filterTree(this.value)">
@@ -213,6 +213,10 @@ pre{padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12px;lin
           <span class="mb GET">GET</span><span class="t-name">auth/me</span>
           <span class="lock-sm">🔒</span>
         </div>
+        <div class="t-item" onclick="load('changePassword')" data-key="changePassword">
+          <span class="mb PATCH">PATCH</span><span class="t-name">auth/change-password</span>
+          <span class="lock-sm">🔒</span>
+        </div>
       </div>
     </div>
 
@@ -231,13 +235,29 @@ pre{padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12px;lin
           <span class="mb PATCH">PATCH</span><span class="t-name">profile/me</span>
           <span class="lock-sm">🔒</span>
         </div>
+        <div class="t-item" onclick="load('uploadAvatar')" data-key="uploadAvatar">
+          <span class="mb POST">POST</span><span class="t-name">profile/avatar</span>
+          <span class="lock-sm">🔒</span>
+        </div>
       </div>
     </div>
+
+    <div class="tree-collection">
+      <div class="coll-hdr" onclick="toggleColl(this)">
+        <span class="coll-arr o">▶</span>
+        <span>⚡</span>
+        <span class="coll-lbl">Gamification</span>
+      </div>
+      <div class="coll-items o">
+        <div class="t-item" onclick="load('getStats')" data-key="getStats">
+          <span class="mb GET">GET</span><span class="t-name">gamification/me</span>
+          <span class="lock-sm">🔒</span>
+        </div>
+      </div>
+    </div>
+
     <div class="tree-collection" style="opacity:.3;pointer-events:none">
       <div class="coll-hdr"><span class="coll-arr">▶</span><span>📚</span><span class="coll-lbl">Courses</span><span class="soon-tag">SOON</span></div>
-    </div>
-    <div class="tree-collection" style="opacity:.3;pointer-events:none">
-      <div class="coll-hdr"><span class="coll-arr">▶</span><span>⚡</span><span class="coll-lbl">Gamification</span><span class="soon-tag">SOON</span></div>
     </div>
     <div class="tree-collection" style="opacity:.3;pointer-events:none">
       <div class="coll-hdr"><span class="coll-arr">▶</span><span>🔔</span><span class="coll-lbl">Notifications</span><span class="soon-tag">SOON</span></div>
@@ -487,17 +507,24 @@ const EP = {
     protected:true,
     params:[
       {name:'Authorization',type:'header',req:true,desc:'Bearer TOKEN — JWT from the login response'},
+      {name:'full_name',type:'string',req:false,desc:'Min 2, max 100 characters — updates users table'},
       {name:'bio',type:'string',req:false,desc:'Max 500 characters'},
       {name:'avatar_url',type:'string',req:false,desc:'Must be a valid URL (https://...)'},
+      {name:'specialization',type:'string',req:false,desc:'Max 100 characters — e.g. Full-Stack Web Development'},
+      {name:'experience_years',type:'number',req:false,desc:'Integer between 0 and 50'},
     ],
     bodyLang:'JSON',
     body:`{
-  <span class="jk">"bio"</span>: <span class="js">"I love coding!"</span>
+  <span class="jk">"full_name"</span>:        <span class="js">"Khalil Khalfi"</span>,
+  <span class="jk">"bio"</span>:              <span class="js">"Full-Stack Developer"</span>,
+  <span class="jk">"specialization"</span>:   <span class="js">"Full-Stack Web Development"</span>,
+  <span class="jk">"experience_years"</span>: <span class="jn">5</span>
 }`,
     steps:[
       'authMiddleware reads and verifies JWT token',
       'validateRequest checks body — at least one field required',
-      'profileService validates bio max length and avatar_url format',
+      'If full_name sent → updateFullName() in users table',
+      'If bio/avatar_url/specialization/experience_years sent → updateProfile() in profiles table',
       'Dynamic UPDATE query — only updates sent fields',
       'Updated profile fetched and returned',
     ],
@@ -506,12 +533,14 @@ const EP = {
   <span class="jk">"success"</span>: <span class="jb">true</span>,
   <span class="jk">"message"</span>: <span class="js">"Profile updated successfully"</span>,
   <span class="jk">"profile"</span>: {
-    <span class="jk">"id"</span>:          <span class="js">"278e0907-1ded-11f1-b5c6-..."</span>,
-    <span class="jk">"user_id"</span>:     <span class="js">"278c6451-1ded-11f1-b5c6-..."</span>,
-    <span class="jk">"avatar_url"</span>:  <span class="jb">null</span>,
-    <span class="jk">"bio"</span>:         <span class="js">"I love coding!"</span>,
-    <span class="jk">"preferences"</span>: <span class="jb">null</span>,
-    <span class="jk">"updated_at"</span>:  <span class="js">"2026-03-12T09:54:16.000Z"</span>
+    <span class="jk">"id"</span>:               <span class="js">"278e0907-..."</span>,
+    <span class="jk">"user_id"</span>:          <span class="js">"278c6451-..."</span>,
+    <span class="jk">"avatar_url"</span>:       <span class="js">"uploads/avatars/278c6451_123.jpg"</span>,
+    <span class="jk">"bio"</span>:              <span class="js">"Full-Stack Developer"</span>,
+    <span class="jk">"specialization"</span>:   <span class="js">"Full-Stack Web Development"</span>,
+    <span class="jk">"experience_years"</span>: <span class="jn">5</span>,
+    <span class="jk">"preferences"</span>:      <span class="jb">null</span>,
+    <span class="jk">"updated_at"</span>:       <span class="js">"2026-03-14T09:05:46.000Z"</span>
   }
 }`},
       '400 Bad Request':{sc:'err',body:`{
@@ -526,11 +555,159 @@ const EP = {
 }`},
     },
     db:[
-      {ico:'fa-id-card',cls:'gr',table:'profiles',trigger:'Always on update',fields:['bio','avatar_url','updated_at']},
+      {ico:'fa-id-card',cls:'gr',table:'profiles',trigger:'Always on update',fields:['bio','avatar_url','full_name','specialization','experience_years','updated_at']},
+      {ico:'fa-user',cls:'bl',table:'users',trigger:'Only if full_name sent',fields:['full_name']},
     ],
     notices:[
       {type:'info',icon:'fa-lock',text:'Protected route — include the JWT from login as: Authorization: Bearer TOKEN'},
       {type:'warn',icon:'fa-triangle-exclamation',text:'Send only the fields you want to update. Empty body {} returns 400.'},
+    ],
+  },
+
+  changePassword:{
+    method:'PATCH',path:'/api/auth/change-password',
+    desc:'Change the current user\'s password. Requires the current password for verification.',
+    protected:true,
+    params:[
+      {name:'Authorization',type:'header',req:true,desc:'Bearer TOKEN — JWT from login'},
+      {name:'current_password',type:'string',req:true,desc:'The user\'s current password'},
+      {name:'new_password',type:'string',req:true,desc:'New password — minimum 8 characters'},
+    ],
+    bodyLang:'JSON',
+    body:`{
+  <span class="jk">"current_password"</span>: <span class="js">"OldPass123!"</span>,
+  <span class="jk">"new_password"</span>:     <span class="js">"NewPass456!"</span>
+}`,
+    steps:[
+      'authMiddleware verifies JWT token',
+      'Joi validation — both fields required',
+      'User fetched from DB by id from token',
+      'Current password verified against bcrypt hash',
+      'New password hashed with bcrypt cost factor 12',
+      'New hash saved in users table',
+    ],
+    responses:{
+      '200 OK':{sc:'ok',body:`{
+  <span class="jk">"success"</span>: <span class="jb">true</span>,
+  <span class="jk">"message"</span>: <span class="js">"Password changed successfully"</span>
+}`},
+      '400 Bad Request':{sc:'err',body:`{
+  <span class="jk">"success"</span>:  <span class="jb">false</span>,
+  <span class="jk">"messages"</span>: [
+    <span class="js">"new_password must be at least 8 characters"</span>
+  ]
+}`},
+      '401 Unauthorized':{sc:'err',body:`{
+  <span class="jk">"success"</span>: <span class="jb">false</span>,
+  <span class="jk">"message"</span>: <span class="js">"Current password is incorrect"</span>
+}`},
+    },
+    db:[
+      {ico:'fa-user',cls:'bl',table:'users',trigger:'Always on success',fields:['password_hash']},
+    ],
+    notices:[
+      {type:'info',icon:'fa-lock',text:'Protected route — include the JWT from login as: Authorization: Bearer TOKEN'},
+      {type:'warn',icon:'fa-shield-halved',text:'Wrong current password returns 401 — user must know their current password to change it.'},
+    ],
+  },
+
+  uploadAvatar:{
+    method:'POST',path:'/api/profile/avatar',
+    desc:'Upload a profile avatar image. Accepts JPG and PNG only. Max size 2MB.',
+    protected:true,
+    params:[
+      {name:'Authorization',type:'header',req:true,desc:'Bearer TOKEN — JWT from login'},
+      {name:'avatar',type:'file (form-data)',req:true,desc:'JPG or PNG image — max 2MB'},
+    ],
+    bodyLang:'FORM-DATA',
+    body:`Content-Type: multipart/form-data
+
+<span class="jk">avatar</span>: <span class="js">[image file — JPG or PNG, max 2MB]</span>`,
+    steps:[
+      'authMiddleware verifies JWT token',
+      'Multer reads the file from multipart/form-data',
+      'File type checked — only image/jpeg and image/png allowed',
+      'File size checked — max 2MB',
+      'File saved to uploads/avatars/ with unique filename',
+      'avatar_url path saved in profiles table',
+      'Updated profile returned',
+    ],
+    responses:{
+      '200 OK':{sc:'ok',body:`{
+  <span class="jk">"success"</span>: <span class="jb">true</span>,
+  <span class="jk">"message"</span>: <span class="js">"Avatar uploaded successfully"</span>,
+  <span class="jk">"profile"</span>: {
+    <span class="jk">"id"</span>:          <span class="js">"278e0907-..."</span>,
+    <span class="jk">"user_id"</span>:     <span class="js">"278c6451-..."</span>,
+    <span class="jk">"avatar_url"</span>:  <span class="js">"uploads/avatars/278c6451_1773477389716.jpg"</span>,
+    <span class="jk">"bio"</span>:         <span class="js">"Full-Stack Developer"</span>,
+    <span class="jk">"updated_at"</span>:  <span class="js">"2026-03-14T08:36:29.000Z"</span>
+  }
+}`},
+      '400 Wrong Type':{sc:'err',body:`{
+  <span class="jk">"success"</span>:    <span class="jb">false</span>,
+  <span class="jk">"message"</span>:    <span class="js">"File must be JPG or PNG"</span>,
+  <span class="jk">"message_en"</span>: <span class="js">"File must be JPG or PNG"</span>
+}`},
+      '400 No File':{sc:'err',body:`{
+  <span class="jk">"success"</span>:    <span class="jb">false</span>,
+  <span class="jk">"message"</span>:    <span class="js">"No image was sent"</span>,
+  <span class="jk">"message_en"</span>: <span class="js">"No image was sent"</span>
+}`},
+      '400 Too Large':{sc:'err',body:`{
+  <span class="jk">"success"</span>:    <span class="jb">false</span>,
+  <span class="jk">"message"</span>:    <span class="js">"Image size exceeds 2MB"</span>,
+  <span class="jk">"message_en"</span>: <span class="js">"Image size exceeds 2MB"</span>
+}`},
+    },
+    db:[
+      {ico:'fa-id-card',cls:'gr',table:'profiles',trigger:'Always on upload',fields:['avatar_url','updated_at']},
+    ],
+    notices:[
+      {type:'info',icon:'fa-lock',text:'Protected route — include the JWT from login as: Authorization: Bearer TOKEN'},
+      {type:'warn',icon:'fa-triangle-exclamation',text:'In Postman: Body → form-data → key: avatar (type: File)'},
+    ],
+  },
+
+  getStats:{
+    method:'GET',path:'/api/gamification/me',
+    desc:'Get current student\'s gamification stats — XP, level and rank. Students only.',
+    protected:true,
+    params:[
+      {name:'Authorization',type:'header',req:true,desc:'Bearer TOKEN — must be a student account'},
+    ],
+    bodyLang:'HEADER',
+    body:`Authorization: Bearer <span class="ju">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...</span>`,
+    steps:[
+      'authMiddleware verifies JWT token',
+      'Role checked — must be student (teachers get 403)',
+      'Gamification stats fetched from DB by student_id',
+      'Stats object returned',
+    ],
+    responses:{
+      '200 OK':{sc:'ok',body:`{
+  <span class="jk">"success"</span>: <span class="jb">true</span>,
+  <span class="jk">"stats"</span>: {
+    <span class="jk">"id"</span>:            <span class="js">"de7545d4-..."</span>,
+    <span class="jk">"student_id"</span>:    <span class="js">"de702797-..."</span>,
+    <span class="jk">"total_xp"</span>:      <span class="jn">0</span>,
+    <span class="jk">"current_level"</span>: <span class="jn">1</span>,
+    <span class="jk">"rank"</span>:          <span class="jb">null</span>,
+    <span class="jk">"updated_at"</span>:    <span class="js">"2026-03-14T08:50:36.000Z"</span>
+  }
+}`},
+      '403 Forbidden':{sc:'err',body:`{
+  <span class="jk">"success"</span>: <span class="jb">false</span>,
+  <span class="jk">"message"</span>: <span class="js">"This feature is for students only"</span>
+}`},
+      '401 Unauthorized':{sc:'err',body:`{
+  <span class="jk">"success"</span>: <span class="jb">false</span>,
+  <span class="jk">"message"</span>: <span class="js">"No token provided"</span>
+}`},
+    },
+    db:[],
+    notices:[
+      {type:'info',icon:'fa-lock',text:'Protected route — students only. Teachers get 403 Forbidden.'},
     ],
   },
 };
