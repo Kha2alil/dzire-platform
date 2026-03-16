@@ -261,7 +261,157 @@ const deleteAssessment = async (req, res, next) => {
         next(error);
     }
 };
+// ============================================================
+// ASSESSMENT EDIT OPERATIONS
+// ============================================================
 
+/**
+ * تعديل عنوان ونوع الاختبار
+ * PATCH /api/courses/:courseId/chapters/:chapterId/assessments/:assessmentId
+ */
+const updateAssessment = async (req, res, next) => {
+    try {
+        const assessment = await courseService.updateAssessment(
+            req.params.courseId,
+            req.params.chapterId,
+            req.params.assessmentId,
+            req.user.id,
+            req.body
+        );
+        res.status(200).json({
+            success: true,
+            message: 'تم تعديل الاختبار بنجاح',
+            data: { assessment }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * تعديل سؤال موجود
+ * PATCH /api/courses/:courseId/assessments/:assessmentId/questions/:questionId
+ */
+const updateQuestion = async (req, res, next) => {
+    try {
+        const question = await courseService.updateQuestion(
+            req.params.courseId,
+            req.params.assessmentId,
+            req.params.questionId,
+            req.user.id,
+            req.body
+        );
+        res.status(200).json({
+            success: true,
+            message: 'تم تعديل السؤال بنجاح',
+            data: { question }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * إضافة سؤال جديد
+ * POST /api/courses/:courseId/assessments/:assessmentId/questions
+ */
+const addQuestion = async (req, res, next) => {
+    try {
+        const assessment = await courseService.addQuestion(
+            req.params.courseId,
+            req.params.assessmentId,
+            req.user.id,
+            req.body
+        );
+        res.status(201).json({
+            success: true,
+            message: 'تم إضافة السؤال بنجاح',
+            data: { assessment }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * حذف سؤال
+ * DELETE /api/courses/:courseId/assessments/:assessmentId/questions/:questionId
+ */
+const deleteQuestion = async (req, res, next) => {
+    try {
+        const result = await courseService.deleteQuestion(
+            req.params.courseId,
+            req.params.assessmentId,
+            req.params.questionId,
+            req.user.id
+        );
+        res.status(200).json({ success: true, message: result.message });
+    } catch (error) {
+        next(error);
+    }
+};
+/**
+ * تعديل بيانات الـ Chapter
+ * PATCH /api/courses/:courseId/chapters/:chapterId
+ */
+const updateChapter = async (req, res, next) => {
+    try {
+        const chapter = await courseService.updateChapter(
+            req.params.courseId,
+            req.params.chapterId,
+            req.user.id,
+            req.body
+        );
+        res.status(200).json({
+            success: true,
+            message: 'تم تعديل الـ Chapter بنجاح',
+            data: { chapter }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * تعديل بيانات الـ Lesson
+ * PATCH /api/courses/:courseId/chapters/:chapterId/lessons/:lessonId
+ */
+const updateLesson = async (req, res, next) => {
+    try {
+        const lesson = await courseService.updateLesson(
+            req.params.courseId,
+            req.params.chapterId,
+            req.params.lessonId,
+            req.user.id,
+            req.body
+        );
+        res.status(200).json({
+            success: true,
+            message: 'تم تعديل الدرس بنجاح',
+            data: { lesson }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+/**
+ * البحث عن كورسات الأستاذ
+ * GET /api/courses/search?title=python&level=beginner
+ */
+const searchCourses = async (req, res, next) => {
+    try {
+        const courses = await courseService.searchCourses(
+            req.user.id,
+            req.query  // title و level يأتيان من الـ URL
+        );
+        res.status(200).json({
+            success: true,
+            data: { courses }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
 module.exports = {
     createCourse,
     getTeacherCourses,
@@ -275,5 +425,12 @@ module.exports = {
     uploadLessonContent,
     deleteLesson,
     createAssessment,
-    deleteAssessment
+    deleteAssessment,
+    updateAssessment,
+    updateQuestion,
+    addQuestion,
+    deleteQuestion,
+    updateChapter,
+    updateLesson,
+    searchCourses
 };

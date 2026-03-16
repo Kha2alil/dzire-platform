@@ -79,7 +79,7 @@ const getCourseDetails = async (courseId, teacherId) => {
 
     const chaptersWithDetails = await Promise.all(
         chapters.map(async (chapter) => {
-            const lessons     = await courseRepository.findLessonsByChapter(chapter.id);
+            const lessons = await courseRepository.findLessonsByChapter(chapter.id);
             const assessments = await courseRepository.findAssessmentsByChapter(chapter.id);
             return { ...chapter, lessons, assessments };
         })
@@ -232,7 +232,7 @@ const createLesson = async (courseId, chapterId, teacherId, lessonData) => {
     await _verifyCourseOwnership(courseId, teacherId);
     await _verifyChapterBelongsToCourse(chapterId, courseId);
 
-   return courseRepository.createLesson(chapterId, value, courseId);
+    return courseRepository.createLesson(chapterId, value, courseId);
 };
 
 /**
@@ -252,7 +252,7 @@ const uploadLessonContent = async (courseId, chapterId, lessonId, teacherId, fil
     // تحديد المجلد حسب نوع الملف
     // Determine folder based on file type
     const isVideo = file.mimetype.startsWith('video/');
-    const folder  = isVideo ? 'videos' : 'pdfs';
+    const folder = isVideo ? 'videos' : 'pdfs';
     const contentUrl = `/uploads/${folder}/${file.filename}`;
 
     // جلب الدرس لحذف الملف القديم
@@ -382,7 +382,217 @@ const _verifyChapterBelongsToCourse = async (chapterId, courseId) => {
 
     return chapter;
 };
+// ============================================================
+// ASSESSMENT EDIT OPERATIONS
+// ============================================================
 
+/**
+ * تعديل عنوان ونوع الاختبار
+ * Update assessment title and type
+ */
+const updateAssessment = async (courseId, chapterId, assessmentId, teacherId, updateData) => {
+
+    // الخطوة 1: تحقق من الملكية
+    await _verifyCourseOwnership(courseId, teacherId);
+
+    // الخطوة 2: تحقق أن الاختبار موجود وتابع للـ chapter
+    const assessment = await courseRepository.findAssessmentById(assessmentId);
+    if (!assessment || assessment.chapter_id !== chapterId) {
+        const error = new Error('الاختبار غير موجود');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    // الخطوة 3: تحقق من البيانات
+    if (!updateData.title && !updateData.type) {
+        const error = new Error('يجب إرسال حقل واحد على الأقل');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    if (updateData.type && !['quiz', 'final_exam'].includes(updateData.type)) {
+        const error = new Error('نوع الاختبار يجب أن يكون quiz أو final_exam');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    // الخطوة 4: حدّث الاختبار
+    return courseRepository.updateAssessment(assessmentId, updateData);
+};
+
+/**
+ * تعديل سؤال موجود
+ * Update existing question
+ */
+const updateQuestion = async (courseId, assessmentId, questionId, teacherId, updateData) => {
+
+    // الخطوة 1: تحقق من الملكية
+    await _verifyCourseOwnership(courseId, teacherId);
+
+    // الخطوة 2: تحقق أن السؤال موجود وتابع للاختبار
+    const question = await courseRepository.findQuestionById(questionId);
+    if (!question || question.assessment_id !== assessmentId) {
+        const error = new Error('السؤال غير موجود');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    // الخطوة 3: تحقق أن البيانات غير فارغة
+    if (Object.keys(updateData).length === 0) {
+        const error = new Error('يجب إرسال حقل واحد على الأقل');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    // الخطوة 4: حدّث السؤال
+    return courseRepository.updateQuestion(questionId, updateData);
+};
+
+/**
+ * إضافة سؤال جديد لاختبار موجود
+ * Add new question to existing assessment
+ */
+const addQuestion = async (courseId, assessmentId, teacherId, questionData) => {
+
+    // الخطوة 1: تحقق من الملكية
+    await _verifyCourseOwnership(courseId, teacherId);
+
+    // الخطوة 2: تحقق أن الاختبار موجود
+    const assessment = await courseRepository.findAssessmentById(assessmentId);
+    if (!assessment) {
+        const error = new Error('الاختبار غير موجود');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    // الخطوة 3: تحقق من البيانات
+    if (!questionData.question_text || !questionData.options || !questionData.correct_answer) {
+        const error = new Error('question_text و options و correct_answer إجبارية');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    if (!Array.isArray(questionData.options) || questionData.options.length < 2) {
+        const error = new Error('يجب وجود خيارين على الأقل');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    // الخطوة 4: أضف السؤال
+    return courseRepository.addQuestion(assessmentId, questionData);
+};
+
+/**
+ * حذف سؤال
+ * Delete question
+ */
+const deleteQuestion = async (courseId, assessmentId, questionId, teacherId) => {
+
+    // الخطوة 1: تحقق من الملكية
+    await _verifyCourseOwnership(courseId, teacherId);
+
+    // الخطوة 2: تحقق أن السؤال موجود وتابع للاختبار
+    const question = await courseRepository.findQuestionById(questionId);
+    if (!question || question.assessment_id !== assessmentId) {
+        const error = new Error('السؤال غير موجود');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    // الخطوة 3: احذف السؤال
+    await courseRepository.deleteQuestion(questionId);
+    return { message: 'تم حذف السؤال بنجاح' };
+};
+/**
+ * تعديل بيانات الـ Chapter
+ * Update chapter data
+ */
+const updateChapter = async (courseId, chapterId, teacherId, updateData) => {
+
+    // الخطوة 1: تحقق من الملكية
+    await _verifyCourseOwnership(courseId, teacherId);
+
+    // الخطوة 2: تحقق أن الـ chapter موجود وتابع للكورس
+    const chapter = await courseRepository.findChapterById(chapterId);
+    if (!chapter || chapter.course_id !== courseId) {
+        const error = new Error('الـ Chapter غير موجود');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    // الخطوة 3: تحقق أن البيانات غير فارغة
+    if (!updateData.title && updateData.order_index === undefined) {
+        const error = new Error('يجب إرسال حقل واحد على الأقل');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    // الخطوة 4: حدّث الـ chapter
+    return courseRepository.updateChapter(chapterId, updateData);
+};
+
+/**
+ * تعديل بيانات الـ Lesson
+ * Update lesson data
+ */
+const updateLesson = async (courseId, chapterId, lessonId, teacherId, updateData) => {
+
+    // الخطوة 1: تحقق من الملكية
+    await _verifyCourseOwnership(courseId, teacherId);
+
+    // الخطوة 2: تحقق أن الـ lesson موجود وتابع للـ chapter
+    const lesson = await courseRepository.findLessonById(lessonId);
+    if (!lesson || lesson.chapter_id !== chapterId) {
+        const error = new Error('الدرس غير موجود');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    // الخطوة 3: تحقق أن البيانات غير فارغة
+    if (Object.keys(updateData).length === 0) {
+        const error = new Error('يجب إرسال حقل واحد على الأقل');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    // الخطوة 4: تحقق من content_type إذا أُرسل
+    if (updateData.content_type && !['video', 'pdf'].includes(updateData.content_type)) {
+        const error = new Error('نوع المحتوى يجب أن يكون video أو pdf');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    // الخطوة 5: حدّث الدرس
+    return courseRepository.updateLesson(lessonId, updateData);
+};
+
+/**
+ * البحث عن كورسات الأستاذ
+ * Search teacher's courses
+ */
+const searchCourses = async (teacherId, filters) => {
+
+    // تحقق أن فلتر واحد على الأقل موجود
+    if (!filters.title && !filters.level) {
+        const error = new Error('يجب إرسال title أو level للبحث');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    // تحقق من صحة المستوى إذا أُرسل
+    if (filters.level && !['beginner', 'intermediate', 'advanced'].includes(filters.level)) {
+        const error = new Error('المستوى يجب أن يكون beginner أو intermediate أو advanced');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    return courseRepository.searchCourses(teacherId, filters);
+};
+
+module.exports = {
+    // ... الموجود
+    searchCourses
+};
 // ============================================================
 // Exports
 // ============================================================
@@ -399,5 +609,12 @@ module.exports = {
     uploadLessonContent,
     deleteLesson,
     createAssessment,
-    deleteAssessment
+    deleteAssessment,
+    updateAssessment,
+    updateQuestion,
+    addQuestion,
+    deleteQuestion,
+    updateChapter,
+    updateLesson,
+    searchCourses
 };

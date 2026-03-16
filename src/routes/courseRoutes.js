@@ -22,6 +22,13 @@ router.use(authMiddleware);
 // PATCH  /api/courses/:courseId    → تعديل الكورس / Update course
 // DELETE /api/courses/:courseId    → حذف الكورس / Delete course
 // POST   /api/courses/:courseId/thumbnail → رفع صورة الغلاف / Upload thumbnail
+// search
+// GET /api/courses/search?title=python&level=beginner
+router.get(
+    '/search',
+    roleMiddleware('teacher'),
+    courseController.searchCourses
+);
 
 router.post(   '/',          roleMiddleware('teacher'), courseController.createCourse);
 router.get(    '/',          roleMiddleware('teacher'), courseController.getTeacherCourses);
@@ -93,5 +100,50 @@ router.delete(
     roleMiddleware('teacher'),
     courseController.deleteAssessment
 );
+// ============================================================
+// ASSESSMENT EDIT OPERATIONS
+// ============================================================
+
+// PATCH  /api/courses/:courseId/chapters/:chapterId/assessments/:assessmentId
+router.patch(
+    '/:courseId/chapters/:chapterId/assessments/:assessmentId',
+    roleMiddleware('teacher'),
+    courseController.updateAssessment
+);
+
+// POST   /api/courses/:courseId/assessments/:assessmentId/questions
+router.post(
+    '/:courseId/assessments/:assessmentId/questions',
+    roleMiddleware('teacher'),
+    courseController.addQuestion
+);
+
+// PATCH  /api/courses/:courseId/assessments/:assessmentId/questions/:questionId
+router.patch(
+    '/:courseId/assessments/:assessmentId/questions/:questionId',
+    roleMiddleware('teacher'),
+    courseController.updateQuestion
+);
+
+// DELETE /api/courses/:courseId/assessments/:assessmentId/questions/:questionId
+router.delete(
+    '/:courseId/assessments/:assessmentId/questions/:questionId',
+    roleMiddleware('teacher'),
+    courseController.deleteQuestion
+);
+// PATCH /api/courses/:courseId/chapters/:chapterId
+router.patch(
+    '/:courseId/chapters/:chapterId',
+    roleMiddleware('teacher'),
+    courseController.updateChapter
+);
+
+// PATCH /api/courses/:courseId/chapters/:chapterId/lessons/:lessonId
+router.patch(
+    '/:courseId/chapters/:chapterId/lessons/:lessonId',
+    roleMiddleware('teacher'),
+    courseController.updateLesson
+);
+
 
 module.exports = router;

@@ -338,7 +338,7 @@ const findAssessmentById = async (id) => {
     // Convert options from JSON string to Array
     const parsedQuestions = questions.map(q => ({
         ...q,
-       options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options
+        options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options
     }));
 
     return { ...assRows[0], questions: parsedQuestions };
@@ -364,7 +364,235 @@ const deleteAssessment = async (id) => {
     const [result] = await db.query('DELETE FROM assessments WHERE id = ?', [id]);
     return result.affectedRows > 0;
 };
+// ============================================================
+// ASSESSMENT EDIT OPERATIONS
+// ============================================================
 
+/**
+ * تعديل عنوان ونوع الاختبار
+ * Update assessment title and type
+ */
+const updateAssessment = async (assessmentId, updateData) => {
+    const fields = [];
+    const values = [];
+
+    if (updateData.title !== undefined) {
+        fields.push('title = ?');
+        values.push(updateData.title);
+    }
+    if (updateData.type !== undefined) {
+        fields.push('type = ?');
+        values.push(updateData.type);
+    }
+
+    if (fields.length === 0) return null;
+
+    values.push(assessmentId);
+
+    const query = `UPDATE assessments SET ${fields.join(', ')} WHERE id = ?`;
+    await db.query(query, values);
+
+    return findAssessmentById(assessmentId);
+};
+
+/**
+ * تعديل سؤال موجود
+ * Update existing question
+ */
+const updateQuestion = async (questionId, updateData) => {
+    const fields = [];
+    const values = [];
+
+    if (updateData.question_text !== undefined) {
+        fields.push('question_text = ?');
+        values.push(updateData.question_text);
+    }
+    if (updateData.options !== undefined) {
+        fields.push('options = ?');
+        values.push(JSON.stringify(updateData.options));
+    }
+    if (updateData.correct_answer !== undefined) {
+        fields.push('correct_answer = ?');
+        values.push(updateData.correct_answer);
+    }
+    if (updateData.socratic_hint !== undefined) {
+        fields.push('socratic_hint = ?');
+        values.push(updateData.socratic_hint);
+    }
+    if (updateData.difficulty_level !== undefined) {
+        fields.push('difficulty_level = ?');
+        values.push(updateData.difficulty_level);
+    }
+    if (updateData.points !== undefined) {
+        fields.push('points = ?');
+        values.push(updateData.points);
+    }
+
+    if (fields.length === 0) return null;
+
+    values.push(questionId);
+
+    const query = `UPDATE questions SET ${fields.join(', ')} WHERE id = ?`;
+    await db.query(query, values);
+
+    const [rows] = await db.query('SELECT * FROM questions WHERE id = ?', [questionId]);
+    const q = rows[0];
+    return { ...q, options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options };
+};
+
+/**
+ * إضافة سؤال جديد لاختبار موجود
+ * Add new question to existing assessment
+ */
+const addQuestion = async (assessmentId, questionData) => {
+    const { question_text, options, correct_answer, socratic_hint, difficulty_level, points, order_index } = questionData;
+
+    await db.query(
+        `INSERT INTO questions 
+         (assessment_id, question_text, options, correct_answer, socratic_hint, difficulty_level, points, order_index)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            assessmentId,
+            question_text,
+            JSON.stringify(options),
+            correct_answer,
+            socratic_hint || null,
+            difficulty_level || 'medium',
+            points || 1,
+            order_index
+        ]
+    );
+
+    return findAssessmentById(assessmentId);
+};
+
+/**
+ * حذف سؤال
+ * Delete question
+ */
+const deleteQuestion = async (questionId) => {
+    const [result] = await db.query('DELETE FROM questions WHERE id = ?', [questionId]);
+    return result.affectedRows > 0;
+};
+
+/**
+ * البحث عن سؤال بالـ ID
+ * Find question by ID
+ */
+const findQuestionById = async (id) => {
+    const [rows] = await db.query('SELECT * FROM questions WHERE id = ?', [id]);
+    return rows[0] || null;
+};
+/**
+ * تعديل بيانات الـ Chapter
+ * Update chapter data
+ */
+const updateChapter = async (chapterId, updateData) => {
+    const fields = [];
+    const values = [];
+
+    if (updateData.title !== undefined) {
+        fields.push('title = ?');
+        values.push(updateData.title);
+    }
+    if (updateData.order_index !== undefined) {
+        fields.push('order_index = ?');
+        values.push(updateData.order_index);
+    }
+
+    if (fields.length === 0) return null;
+
+    values.push(chapterId);
+
+    const query = `UPDATE chapters SET ${fields.join(', ')} WHERE id = ?`;
+    await db.query(query, values);
+
+    const [rows] = await db.query('SELECT * FROM chapters WHERE id = ?', [chapterId]);
+    return rows[0] || null;
+};
+
+/**
+ * تعديل بيانات الـ Lesson
+ * Update lesson data
+ */
+const updateLesson = async (lessonId, updateData) => {
+    const fields = [];
+    const values = [];
+
+    if (updateData.title !== undefined) {
+        fields.push('title = ?');
+        values.push(updateData.title);
+    }
+    if (updateData.content_type !== undefined) {
+        fields.push('content_type = ?');
+        values.push(updateData.content_type);
+    }
+    if (updateData.order_index !== undefined) {
+        fields.push('order_index = ?');
+        values.push(updateData.order_index);
+    }
+    if (updateData.duration !== undefined) {
+        fields.push('duration = ?');
+        values.push(updateData.duration);
+    }
+    if (updateData.is_free !== undefined) {
+        fields.push('is_free = ?');
+        values.push(updateData.is_free);
+    }
+    if (updateData.xp_reward !== undefined) {
+        fields.push('xp_reward = ?');
+        values.push(updateData.xp_reward);
+    }
+
+    if (fields.length === 0) return null;
+
+    values.push(lessonId);
+
+    const query = `UPDATE lessons SET ${fields.join(', ')} WHERE id = ?`;
+    await db.query(query, values);
+
+    const [rows] = await db.query('SELECT * FROM lessons WHERE id = ?', [lessonId]);
+    return rows[0] || null;
+};
+/**
+ * البحث عن كورسات الأستاذ
+ * Search teacher's courses
+ */
+const searchCourses = async (teacherId, filters) => {
+    let query = `
+        SELECT
+            c.id,
+            c.title,
+            c.description,
+            c.difficulty_level,
+            c.thumbnail_url,
+            c.is_approved,
+            c.created_at,
+            s.name AS subdomain_name
+        FROM courses c
+        JOIN subdomains s ON c.subdomain_id = s.id
+        WHERE c.teacher_id = ?
+    `;
+
+    const values = [teacherId];
+
+    // إضافة فلتر الاسم إذا أُرسل
+    if (filters.title) {
+        query += ` AND c.title LIKE ?`;
+        values.push(`%${filters.title}%`);
+    }
+
+    // إضافة فلتر المستوى إذا أُرسل
+    if (filters.level) {
+        query += ` AND c.difficulty_level = ?`;
+        values.push(filters.level);
+    }
+
+    query += ` ORDER BY c.created_at DESC`;
+
+    const [rows] = await db.query(query, values);
+    return rows;
+};
 // ============================================================
 // Exports
 // ============================================================
@@ -394,5 +622,15 @@ module.exports = {
     createAssessment,
     findAssessmentById,
     findAssessmentsByChapter,
-    deleteAssessment
+    deleteAssessment,
+    updateAssessment,
+    updateQuestion,
+    addQuestion,
+    deleteQuestion,
+    findQuestionById,
+    updateChapter,
+    updateLesson,
+
+
+    searchCourses
 };

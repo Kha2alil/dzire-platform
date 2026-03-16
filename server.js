@@ -28,7 +28,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/uploads', express.static('uploads'));
 app.use('/api/profile', profileRoutes);       
-
+app.use('/api/students', require('./src/routes/studentRoutes'));
 // ربط الـ Error Handler - يجب أن يكون آخر شيء دائماً
 // Connect Error Handler - must always be the last thing
 app.use(errorHandler);
