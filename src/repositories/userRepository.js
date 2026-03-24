@@ -33,8 +33,8 @@ const createUser = async (userData) => {
 
     const [result] = await db.query(query, values);
 
-    // نجلب المستخدم من قاعدة البيانات بدل الاعتماد على insertId
     // Fetch the user from DB instead of relying on insertId
+    // نجلب المستخدم من DB بدل الاعتماد على insertId
     const [rows] = await db.query(
         'SELECT * FROM users WHERE email = ?',
         [userData.email]
@@ -100,6 +100,7 @@ const findById = async (id) => {
             id,
             email,
             full_name,
+            username,
             role,
             status,
             created_at
@@ -191,6 +192,27 @@ const updatePassword = async (userId, newHash) => {
     return result.affectedRows > 0;
 };
 
+/**
+ * تحديث اسم المستخدم
+ * Update username
+ *
+ * @param {string} userId   - ID المستخدم / User ID
+ * @param {string} username - اسم المستخدم الجديد / New username
+ * @returns {boolean}
+ */
+const updateUsername = async (userId, username) => {
+
+    const query = `
+        UPDATE users
+        SET username = ?
+        WHERE id = ?
+    `;
+
+    const [result] = await db.query(query, [username, userId]);
+
+    return result.affectedRows > 0;
+};
+
 // Exports — تصدير جميع الدوال
 module.exports = {
     createUser,
@@ -198,5 +220,6 @@ module.exports = {
     findById,
     updateVerificationStatus,
     updateFullName,
-    updatePassword
+    updatePassword,
+    updateUsername
 };

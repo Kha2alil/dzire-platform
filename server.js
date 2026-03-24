@@ -22,6 +22,8 @@ app.use(cors());
 // Automatically parse JSON in every request
 app.use(express.json());
 
+app.use('/uploads', express.static('uploads'));
+
 // ربط الـ Routes
 // Connect the Routes
 app.use('/api/auth',    authRoutes);

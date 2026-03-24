@@ -8,6 +8,11 @@ const updateProfileSchema = Joi.object({
         .min(2)                  // حرفان على الأقل / at least 2 characters
         .max(100)               // 100 حرف كحد أقصى / max 100 characters
         .optional(),
+    username: Joi.string()
+        .min(3)                              // 3 أحرف على الأقل / at least 3 characters
+        .max(50)                             // 50 حرف كحد أقصى / max 50 characters
+        .pattern(/^[a-zA-Z0-9_]+$/)          // حروف وأرقام وunderscore فقط
+        .optional(),        
 
     bio: Joi.string()
         .max(500)                    // 500 حرف كحد أقصى / max 500 characters

@@ -22,12 +22,11 @@ const getProfile = async (userId) => {
 };
 
 /**
- * تحديث الملف الشخصي للمستخدم الحالي
+* تحديث الملف الشخصي للمستخدم الحالي
  * Update current user's profile
  */
-const updateProfile = async (userId, data) => {
 
-    // الخطوة 1: تحقق من البيانات
+const updateProfile = async (userId, data) => {
     // Step 1: Validate the data
     const { valid, messages, value } = validateUpdateProfile(data);
     if (!valid) {
@@ -37,15 +36,15 @@ const updateProfile = async (userId, data) => {
         throw error;
     }
 
-    // الخطوة 2: لو فيه full_name → حدّثه في جدول users
-    // Step 2: If full_name exists → update it in users table
+    // Step 2 : full_name + username go to users table — separate update
     if (value.full_name) {
         await userRepository.updateFullName(userId, value.full_name);
     }
 
-    // الخطوة 3: لو فيه bio أو avatar_url → حدّثهم في جدول profiles
-    // Step 3: If bio or avatar_url exist → update them in profiles table
-    // bio + avatar_url + specialization + experience_years go to profiles table
+    if (value.username) {
+        await userRepository.updateUsername(userId, value.username);
+    }
+    // Step 3 : bio + avatar_url + specialization + experience_years go to profiles table
     const profileData = {};
     if (value.bio              !== undefined) profileData.bio              = value.bio;
     if (value.avatar_url       !== undefined) profileData.avatar_url       = value.avatar_url;
@@ -55,7 +54,6 @@ const updateProfile = async (userId, data) => {
         await profileRepository.updateProfile(userId, profileData);
     }
 
-    // الخطوة 4: جلب الملف الشخصي المحدّث وإرجاعه
     // Step 4: Fetch and return updated profile
     const profile = await profileRepository.findByUserId(userId);
 

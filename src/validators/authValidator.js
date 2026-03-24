@@ -1,26 +1,30 @@
+
 const Joi = require('joi');
 
-// schema التحقق من بيانات التسجيل
 // Signup validation schema
 const signupSchema = Joi.object({
 
     email: Joi.string()
-        .email()                     // يجب أن يكون إيميل صحيح / must be a valid email
-        .required(),                 // إجباري / required
+        .email()                     //  must be a valid email
+        .required(),                 // required
 
     password: Joi.string()
-        .min(8)                      // 8 أحرف على الأقل / at least 8 characters
+        .min(8)                      // at least 8 characters
         .required(),
 
     full_name: Joi.string()
-        .min(2)                      // حرفان على الأقل / at least 2 characters
-        .max(100)                    // 100 حرف كحد أقصى / max 100 characters
+        .min(2)                       // at least 2 characters
+        .max(100)                    //  max 100 characters
         .required(),
 
     role: Joi.string()
-        .valid('student', 'teacher') // فقط هاتين القيمتين / only these two values
+        .valid('student', 'teacher') //only these two values
         .required()
 });
+
+
+
+
 
 /**
  * التحقق من بيانات التسجيل

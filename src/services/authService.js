@@ -15,9 +15,6 @@ const { validateSignup, validateLogin, validateChangePassword } = require('../va
 */
 
 const signup = async (userData) => {
-
-    // الخطوة 1: تحقق من البيانات
-    // Step 1: Validate the data
     const { valid, messages, value } = validateSignup(userData);
     if (!valid) {
         const error = new Error('بيانات غير صحيحة / Invalid data');
@@ -25,29 +22,17 @@ const signup = async (userData) => {
         error.messages = messages;
         throw error;
     }
-
-    // الخطوة 2: تحقق أن الإيميل غير مستخدم
-    // Step 2: Check email is not already taken
     const existingUser = await userRepository.findByEmail(value.email);
     if (existingUser) {
         const error = new Error('الإيميل مستخدم مسبقاً / Email already exists');
         error.statusCode = 409;
         throw error;
     }
-
-    // الخطوة 3: شفّر كلمة المرور
-    // Step 3: Hash the password
     const password_hash = await bcrypt.hash(value.password, 12);
-
-    // الخطوة 4: أنشئ verification token
-    // Step 4: Generate verification token
     const verificationToken = generateToken(
         { email: value.email },
         '24h'
     );
-
-    // الخطوة 5: احفظ المستخدم في قاعدة البيانات
-    // Step 5: Save the user in the database
     const user = await userRepository.createUser({
         email: value.email,
         password_hash,
@@ -56,21 +41,9 @@ const signup = async (userData) => {
         verification_token: verificationToken,
         token_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000)
     });
-
-    // الخطوة 6: أنشئ Profile فارغ
-    // Step 6: Create empty Profile
     await profileRepository.createProfile(user.id);
-
-    // الخطوة 7: أنشئ Gamification Stats للطلاب فقط
-    // Step 7: Create Gamification Stats for students only
     await gamificationRepository.createGamificationStats(user.id, user.role);
-
-    // الخطوة 8: أرسل إيميل التحقق
-    // Step 8: Send verification email
     await sendVerificationEmail(user.email, user.full_name, verificationToken);
-
-    // الخطوة 9: أرجع رسالة نجاح
-    // Step 9: Return success message
     return {
         message: 'تم التسجيل بنجاح، تحقق من إيميلك / Signed up successfully, check your email',
         email: user.email
