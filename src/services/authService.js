@@ -4,17 +4,14 @@ const profileRepository = require('../repositories/profileRepository');
 const gamificationRepository = require('../repositories/gamificationRepository');
 const { generateToken, verifyToken } = require('../utils/tokenGenerator');
 const { sendVerificationEmail } = require('./emailService');
-const { validateSignup, validateLogin, validateChangePassword } = require('../validators/authValidator'); 
+const { validateSignup, validateLogin, validateChangePassword } = require('../validators/authValidator'); // ✅ kept from feature/auth
 
 /**
  * تسجيل مستخدم جديد
  * Register a new user
- *
- * @param {Object} userData - البيانات المُرسلة من المستخدم / Data sent by the user
- * @returns {Object} - رسالة نجاح مع الإيميل / Success message with email
-*/
-
+ */
 const signup = async (userData) => {
+
     const { valid, messages, value } = validateSignup(userData);
     if (!valid) {
         const error = new Error('بيانات غير صحيحة / Invalid data');
@@ -22,47 +19,45 @@ const signup = async (userData) => {
         error.messages = messages;
         throw error;
     }
+
     const existingUser = await userRepository.findByEmail(value.email);
     if (existingUser) {
         const error = new Error('الإيميل مستخدم مسبقاً / Email already exists');
         error.statusCode = 409;
         throw error;
     }
+
     const password_hash = await bcrypt.hash(value.password, 12);
-    const verificationToken = generateToken(
-        { email: value.email },
-        '24h'
-    );
+    const verificationToken = generateToken({ email: value.email }, '24h');
+
     const user = await userRepository.createUser({
-        email: value.email,
+        email:              value.email,
         password_hash,
-        full_name: value.full_name,
-        role: value.role,
+        full_name:          value.full_name,
+        role:               value.role,
         verification_token: verificationToken,
-        token_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000)
+        token_expires_at:   new Date(Date.now() + 24 * 60 * 60 * 1000)
     });
+
     await profileRepository.createProfile(user.id);
     await gamificationRepository.createGamificationStats(user.id, user.role);
     await sendVerificationEmail(user.email, user.full_name, verificationToken);
+
     return {
         message: 'تم التسجيل بنجاح، تحقق من إيميلك / Signed up successfully, check your email',
-        email: user.email
+        email:   user.email
     };
 };
 
 /**
  * تفعيل حساب المستخدم عن طريق الـ token
  * Activate user account via token
- *
- * @param {string} token - رمز التحقق من الإيميل / Email verification token
- * @returns {Object} - رسالة نجاح / Success message
  */
 const verifyEmail = async (token) => {
 
     // الخطوة 1: تحقق من صحة الـ token
     // Step 1: Verify the token is valid
     const decoded = verifyToken(token);
-    // decoded = { email: "ahmed@gmail.com" }
 
     // الخطوة 2: ابحث عن المستخدم بالإيميل
     // Step 2: Find the user by email
@@ -85,8 +80,6 @@ const verifyEmail = async (token) => {
     // Step 4: Activate the account
     await userRepository.updateVerificationStatus(user.id);
 
-    // الخطوة 5: أرجع رسالة نجاح
-    // Step 5: Return success message
     return {
         message: 'تم تفعيل حسابك بنجاح / Account activated successfully'
     };
@@ -95,9 +88,6 @@ const verifyEmail = async (token) => {
 /**
  * تسجيل دخول المستخدم
  * Login user
- *
- * @param {Object} userData - الإيميل وكلمة المرور / Email and password
- * @returns {Object} - token + بيانات المستخدم / token + user data
  */
 const login = async (userData) => {
 
@@ -144,8 +134,6 @@ const login = async (userData) => {
         '7d'
     );
 
-    // الخطوة 6: أرجع التوكن وبيانات المستخدم
-    // Step 6: Return token and user data
     return {
         message: 'تم تسجيل الدخول بنجاح / Logged in successfully',
         token,
@@ -174,8 +162,8 @@ const changePassword = async (userId, data) => {
         throw error;
     }
 
-    // الخطوة 2: جلب المستخدم من DB للحصول على الهاش
-    // Step 2: Fetch user from DB to get the hash
+    // الخطوة 2: جلب المستخدم من DB
+    // Step 2: Fetch user from DB
     const user = await userRepository.findById(userId);
     if (!user) {
         const error = new Error('المستخدم غير موجود / User not found');
@@ -212,5 +200,5 @@ module.exports = {
     signup,
     verifyEmail,
     login,
-    changePassword
+    changePassword  // ✅ kept from feature/auth
 };

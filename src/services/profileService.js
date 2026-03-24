@@ -1,5 +1,5 @@
 const profileRepository = require('../repositories/profileRepository');
-const userRepository    = require('../repositories/userRepository');
+const userRepository    = require('../repositories/userRepository');  // ✅ kept from feature/auth
 const { validateUpdateProfile } = require('../validators/profileValidator');
 
 /**
@@ -8,8 +8,6 @@ const { validateUpdateProfile } = require('../validators/profileValidator');
  */
 const getProfile = async (userId) => {
 
-    // الخطوة 1: جلب الملف الشخصي من DB
-    // Step 1: Fetch profile from DB
     const profile = await profileRepository.findByUserId(userId);
 
     if (!profile) {
@@ -22,11 +20,12 @@ const getProfile = async (userId) => {
 };
 
 /**
-* تحديث الملف الشخصي للمستخدم الحالي
+ * تحديث الملف الشخصي للمستخدم الحالي
  * Update current user's profile
  */
-
 const updateProfile = async (userId, data) => {
+
+    // الخطوة 1: تحقق من البيانات
     // Step 1: Validate the data
     const { valid, messages, value } = validateUpdateProfile(data);
     if (!valid) {
@@ -36,7 +35,8 @@ const updateProfile = async (userId, data) => {
         throw error;
     }
 
-    // Step 2 : full_name + username go to users table — separate update
+    // الخطوة 2: full_name + username → users table
+    // Step 2: full_name + username go to users table — separate update
     if (value.full_name) {
         await userRepository.updateFullName(userId, value.full_name);
     }
@@ -44,16 +44,20 @@ const updateProfile = async (userId, data) => {
     if (value.username) {
         await userRepository.updateUsername(userId, value.username);
     }
-    // Step 3 : bio + avatar_url + specialization + experience_years go to profiles table
+
+    // الخطوة 3: bio + avatar_url + specialization + experience_years → profiles table
+    // Step 3: profile-specific fields go to profiles table
     const profileData = {};
     if (value.bio              !== undefined) profileData.bio              = value.bio;
     if (value.avatar_url       !== undefined) profileData.avatar_url       = value.avatar_url;
     if (value.specialization   !== undefined) profileData.specialization   = value.specialization;
     if (value.experience_years !== undefined) profileData.experience_years = value.experience_years;
+
     if (Object.keys(profileData).length > 0) {
         await profileRepository.updateProfile(userId, profileData);
     }
 
+    // الخطوة 4: جلب الملف الشخصي المحدّث وإرجاعه
     // Step 4: Fetch and return updated profile
     const profile = await profileRepository.findByUserId(userId);
 
@@ -66,7 +70,6 @@ const updateProfile = async (userId, data) => {
  *
  * @param {string} userId - ID المستخدم / User ID
  * @param {Object} file   - الملف المُرفوع من Multer / File uploaded by Multer
- * @returns {Object}      - الملف الشخصي المحدّث / Updated profile
  */
 const uploadAvatar = async (userId, file) => {
 
@@ -97,5 +100,5 @@ const uploadAvatar = async (userId, file) => {
 module.exports = {
     getProfile,
     updateProfile,
-    uploadAvatar
+    uploadAvatar    // ✅ kept from feature/auth
 };

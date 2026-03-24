@@ -6,31 +6,18 @@ const userRepository = require('../repositories/userRepository');
  * Receive signup request and send response
  *
  * POST /api/auth/signup
-*/
-
+ */
 const signup = async (req, res, next) => {
-
     try {
-
-        // البيانات تأتي من جسم الطلب
-        // Data comes from the request body
         const userData = req.body;
-
-        // نعطي البيانات للـ Service ليتعامل معها
-        // We give the data to the Service to handle
         const result = await authService.signup(userData);
 
-        // نرسل رسالة نجاح للمستخدم
-        // Send success response to the user
         res.status(201).json({
             success: true,
             message: result.message,
-            email: result.email
+            email:   result.email
         });
-
     } catch (error) {
-        // نمرر الخطأ للـ errorHandler تلقائياً
-        // Pass the error to errorHandler automatically
         next(error);
     }
 };
@@ -42,11 +29,7 @@ const signup = async (req, res, next) => {
  * GET /api/auth/verify-email?token=...
  */
 const verifyEmail = async (req, res, next) => {
-
     try {
-
-        // الـ token يأتي من الـ URL وليس من الـ body
-        // The token comes from the URL not from the body
         const { token } = req.query;
 
         if (!token) {
@@ -57,13 +40,10 @@ const verifyEmail = async (req, res, next) => {
 
         const result = await authService.verifyEmail(token);
 
-        // نرسل رسالة نجاح للمستخدم
-        // Send success response to the user
         res.status(200).json({
             success: true,
             message: result.message
         });
-
     } catch (error) {
         next(error);
     }
@@ -76,24 +56,16 @@ const verifyEmail = async (req, res, next) => {
  * POST /api/auth/login
  */
 const login = async (req, res, next) => {
-
     try {
-
-        // البيانات تأتي من جسم الطلب
-        // Data comes from the request body
         const userData = req.body;
-
         const result = await authService.login(userData);
 
-        // نرسل التوكن وبيانات المستخدم
-        // Send token and user data
         res.status(200).json({
             success: true,
             message: result.message,
             token:   result.token,
             user:    result.user
         });
-
     } catch (error) {
         next(error);
     }
@@ -106,10 +78,7 @@ const login = async (req, res, next) => {
  * GET /api/auth/me
  */
 const getMe = async (req, res, next) => {
-
     try {
-
-        // req.user comes from authMiddleware — already verified
         const user = await userRepository.findById(req.user.id);
 
         if (!user) {
@@ -123,14 +92,13 @@ const getMe = async (req, res, next) => {
             user: {
                 id:         user.id,
                 full_name:  user.full_name,
-                username:   user.username,
+                username:   user.username,   // ✅ kept from feature/auth
                 email:      user.email,
                 role:       user.role,
                 status:     user.status,
                 created_at: user.created_at
             }
         });
-
     } catch (error) {
         next(error);
     }
@@ -142,16 +110,13 @@ const getMe = async (req, res, next) => {
  * Change current user's password
  */
 const changePassword = async (req, res, next) => {
-
     try {
-
         const result = await authService.changePassword(req.user.id, req.body);
 
         res.status(200).json({
             success: true,
             message: result.message
         });
-
     } catch (error) {
         next(error);
     }
@@ -162,5 +127,5 @@ module.exports = {
     verifyEmail,
     login,
     getMe,
-    changePassword
+    changePassword  // ✅ kept from feature/auth
 };

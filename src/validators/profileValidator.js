@@ -5,34 +5,35 @@ const Joi = require('joi');
 const updateProfileSchema = Joi.object({
 
     full_name: Joi.string()
-        .min(2)                  // حرفان على الأقل / at least 2 characters
-        .max(100)               // 100 حرف كحد أقصى / max 100 characters
+        .min(2)                              // حرفان على الأقل / at least 2 characters
+        .max(100)                            // 100 حرف كحد أقصى / max 100 characters
         .optional(),
+
     username: Joi.string()
         .min(3)                              // 3 أحرف على الأقل / at least 3 characters
         .max(50)                             // 50 حرف كحد أقصى / max 50 characters
         .pattern(/^[a-zA-Z0-9_]+$/)          // حروف وأرقام وunderscore فقط
-        .optional(),        
+        .optional(),
 
     bio: Joi.string()
-        .max(500)                    // 500 حرف كحد أقصى / max 500 characters
-        .optional(),                 // اختياري / optional
+        .max(500)                            // 500 حرف كحد أقصى / max 500 characters
+        .optional(),                         // اختياري / optional
 
     avatar_url: Joi.string()
-        .uri()                    // يجب أن يكون رابط صحيح / must be a valid URL
+        .uri()                               // يجب أن يكون رابط صحيح / must be a valid URL
         .optional(),
-    
+
     specialization: Joi.string()
-    .max(100)                       // 100 حرف كحد أقصى / max 100 characters
-    .optional(),
+        .max(100)                            // 100 حرف كحد أقصى / max 100 characters
+        .optional(),
 
     experience_years: Joi.number()
-        .integer()                  // رقم صحيح / integer only
-        .min(0)                     // لا يقل عن 0 / minimum 0
-        .max(50)                    // لا يزيد عن 50 / maximum 50
-        .optional()    
+        .integer()                           // رقم صحيح / integer only
+        .min(0)                              // لا يقل عن 0 / minimum 0
+        .max(50)                             // لا يزيد عن 50 / maximum 50
+        .optional()
 
-}).min(1);                       // يجب أن يكون فيه حقل واحد على الأقل / at least one field required
+}).min(1);                                   // يجب أن يكون فيه حقل واحد على الأقل / at least one field required
 
 /**
  * التحقق من بيانات تحديث الملف الشخصي
@@ -58,10 +59,6 @@ const validateUpdateProfile = (data) => {
 
     return { valid: true, value };
 };
-
-
-
-
 
 module.exports = {
     validateUpdateProfile

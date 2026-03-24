@@ -6,9 +6,7 @@ const profileService = require('../services/profileService');
  * Get current user's profile
  */
 const getProfile = async (req, res, next) => {
-
     try {
-
         // req.user.id يأتي من authMiddleware
         // req.user.id comes from authMiddleware
         const result = await profileService.getProfile(req.user.id);
@@ -17,7 +15,6 @@ const getProfile = async (req, res, next) => {
             success: true,
             profile: result.profile
         });
-
     } catch (error) {
         next(error);
     }
@@ -29,9 +26,7 @@ const getProfile = async (req, res, next) => {
  * Update current user's profile
  */
 const updateProfile = async (req, res, next) => {
-
     try {
-
         const result = await profileService.updateProfile(req.user.id, req.body);
 
         res.status(200).json({
@@ -39,7 +34,6 @@ const updateProfile = async (req, res, next) => {
             message: 'تم تحديث الملف الشخصي بنجاح / Profile updated successfully',
             profile: result.profile
         });
-
     } catch (error) {
         next(error);
     }
@@ -51,9 +45,7 @@ const updateProfile = async (req, res, next) => {
  * Upload avatar image
  */
 const uploadAvatar = async (req, res, next) => {
-
     try {
-
         // req.file يأتي من Multer middleware
         // req.file comes from Multer middleware
         const result = await profileService.uploadAvatar(req.user.id, req.file);
@@ -63,7 +55,6 @@ const uploadAvatar = async (req, res, next) => {
             message:  'تم رفع الصورة بنجاح / Avatar uploaded successfully',
             profile:  result.profile
         });
-
     } catch (error) {
         next(error);
     }
@@ -72,5 +63,5 @@ const uploadAvatar = async (req, res, next) => {
 module.exports = {
     getProfile,
     updateProfile,
-    uploadAvatar
+    uploadAvatar    // ✅ kept from feature/auth
 };

@@ -1,4 +1,3 @@
-
 const Joi = require('joi');
 
 // Signup validation schema
@@ -18,13 +17,9 @@ const signupSchema = Joi.object({
         .required(),
 
     role: Joi.string()
-        .valid('student', 'teacher') //only these two values
+        .valid('student', 'teacher') // only these two values
         .required()
 });
-
-
-
-
 
 /**
  * التحقق من بيانات التسجيل
@@ -89,6 +84,10 @@ const changePasswordSchema = Joi.object({
 
 });
 
+/**
+ * التحقق من بيانات تغيير كلمة المرور
+ * Validate change password data
+ */
 const validateChangePassword = (data) => {
     const { error, value } = changePasswordSchema.validate(data, { abortEarly: false });
 
@@ -99,7 +98,6 @@ const validateChangePassword = (data) => {
 
     return { valid: true, value };
 };
-
 
 module.exports = {
     validateSignup,
