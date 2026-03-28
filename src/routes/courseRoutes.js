@@ -30,10 +30,11 @@ router.get(
     courseController.searchCourses
 );
 
-router.post(   '/',          roleMiddleware('teacher'), courseController.createCourse);
-router.get(    '/',          roleMiddleware('teacher'), courseController.getTeacherCourses);
-router.get(    '/:courseId', roleMiddleware('teacher'), courseController.getCourseDetails);
-router.patch(  '/:courseId', roleMiddleware('teacher'), courseController.updateCourse);
+router.post(  '/',          roleMiddleware('teacher'), courseController.createCourse);
+router.get(   '/',          roleMiddleware('teacher'), courseController.getTeacherCourses);
+router.get(   '/:courseId', roleMiddleware('teacher'), courseController.getCourseDetails);
+router.patch( '/:courseId', roleMiddleware('teacher'), courseController.updateCourse);
+router.patch('/:courseId/publish',roleMiddleware('teacher'),courseController.togglePublishStatus);
 router.delete( '/:courseId', roleMiddleware('teacher'), courseController.deleteCourse);
 
 router.post(

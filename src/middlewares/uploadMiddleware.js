@@ -35,7 +35,7 @@ const storage = multer.diskStorage({
             // صورة غلاف الكورس (feature/courses)
             uploadPath += 'thumbnails';
 
-        } else if (file.fieldname === 'content') {
+        } else if (file.fieldname === 'file') {
             // محتوى الدرس — فيديو أو PDF (feature/courses)
             if (file.mimetype.startsWith('video/')) {
                 uploadPath += 'videos';
@@ -106,7 +106,7 @@ const fileFilter = (req, file, cb) => {
         );
     }
 
-    if (file.fieldname === 'content') {
+    if (file.fieldname === 'file') {
         // feature/courses: فيديو أو PDF فقط
         if ([...allowedVideos, ...allowedPdfs].includes(file.mimetype)) {
             return cb(null, true);
@@ -156,7 +156,7 @@ const uploadThumbnail = upload.single('thumbnail');
  * Upload lesson content (video or PDF)
  * POST /api/courses/:courseId/chapters/:chapterId/lessons/:lessonId/content
  */
-const uploadLessonContent = upload.single('content');
+const uploadLessonContent = upload.single('file');
 
 /**
  * معالج أخطاء Multer — يُوضع بعد أي upload middleware في الـ route

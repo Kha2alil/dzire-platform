@@ -127,5 +127,5 @@ module.exports = {
     verifyEmail,
     login,
     getMe,
-    changePassword  // ✅ kept from feature/auth
+    changePassword 
 };

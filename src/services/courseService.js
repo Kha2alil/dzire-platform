@@ -55,9 +55,7 @@ const getTeacherCourses = async (teacherId) => {
  * Get course details with chapters and lessons
  */
 const getCourseDetails = async (courseId, teacherId) => {
-
     // الخطوة 1: جلب الكورس
-    // Step 1: Fetch the course
     const course = await courseRepository.findCourseById(courseId);
     if (!course) {
         const error = new Error('الكورس غير موجود / Course not found');
@@ -66,22 +64,33 @@ const getCourseDetails = async (courseId, teacherId) => {
     }
 
     // الخطوة 2: تحقق أن الأستاذ هو صاحب الكورس
-    // Step 2: Verify the teacher owns the course
     if (course.teacher_id !== teacherId) {
         const error = new Error('ليس لديك صلاحية لهذا الكورس / You do not have permission for this course');
         error.statusCode = 403;
         throw error;
     }
 
-    // الخطوة 3: جلب الـ Chapters مع الدروس والتقييمات
-    // Step 3: Fetch chapters with lessons and assessments
+    // الخطوة 3: جلب الـ Chapters مع الدروس والتقييمات والأسئلة
     const chapters = await courseRepository.findChaptersByCourse(courseId);
 
     const chaptersWithDetails = await Promise.all(
         chapters.map(async (chapter) => {
             const lessons = await courseRepository.findLessonsByChapter(chapter.id);
             const assessments = await courseRepository.findAssessmentsByChapter(chapter.id);
-            return { ...chapter, lessons, assessments };
+
+            // 💡 التعديل هنا: جلب الأسئلة لكل اختبار
+            const assessmentsWithQuestions = await Promise.all(
+                assessments.map(async (assessment) => {
+                    const questions = await courseRepository.findQuestionsByAssessmentId(assessment.id);
+                    return { ...assessment, questions };
+                })
+            );
+
+            return { 
+                ...chapter, 
+                lessons, 
+                assessments: assessmentsWithQuestions // نمرر الاختبارات بأسئلتها
+            };
         })
     );
 
@@ -112,6 +121,34 @@ const updateCourse = async (courseId, teacherId, updateData) => {
     const updated = await courseRepository.updateCourse(courseId, value);
     if (!updated) {
         const error = new Error('فشل التحديث / Update failed');
+        error.statusCode = 500;
+        throw error;
+    }
+
+    return updated;
+};
+
+/**
+ * تغيير حالة النشر للكورس (منشور / مسودة)
+ * Toggle course publish status
+ */
+const toggleCoursePublishStatus = async (courseId, teacherId, isPublished) => {
+
+    // الخطوة 1: تحقق من الملكية (هل الأستاذ هو صاحب الكورس؟)
+    await _verifyCourseOwnership(courseId, teacherId);
+
+    // الخطوة 2: تحقق أن القيمة المُرسلة صحيحة (True أو False)
+    if (typeof isPublished !== 'boolean') {
+        const error = new Error('قيمة غير صالحة، يجب أن تكون true أو false');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    // الخطوة 3: تحديث الحقل is_published في قاعدة البيانات
+    const updated = await courseRepository.updateCourse(courseId, { is_published: isPublished });
+    
+    if (!updated) {
+        const error = new Error('فشل تحديث حالة الكورس');
         error.statusCode = 500;
         throw error;
     }
@@ -239,35 +276,42 @@ const createLesson = async (courseId, chapterId, teacherId, lessonData) => {
  * رفع محتوى الدرس (فيديو أو PDF)
  * Upload lesson content (video or PDF)
  */
+/**
+ * رفع محتوى الدرس (فيديو أو PDF)
+ */
 const uploadLessonContent = async (courseId, chapterId, lessonId, teacherId, file) => {
+    // 1. التحقق من ملكية الأستاذ للكورس (للحماية)
+    const course = await courseRepository.findCourseById(courseId);
+    if (!course || course.teacher_id !== teacherId) {
+        throw new Error('غير مسموح لك بتعديل هذا الكورس / Unauthorized');
+    }
 
     if (!file) {
-        const error = new Error('لم يتم رفع أي ملف / No file uploaded');
-        error.statusCode = 400;
-        throw error;
+        throw new Error('لم يتم رفع أي ملف / No file uploaded');
     }
 
-    await _verifyCourseOwnership(courseId, teacherId);
+    // 2. تحديد المسار بناءً على نوع الملف
+    const folder = file.mimetype.startsWith('video/') ? 'videos' : 'pdfs';
+    const fileUrl = `/uploads/${folder}/${file.filename}`;
 
-    // تحديد المجلد حسب نوع الملف
-    // Determine folder based on file type
-    const isVideo = file.mimetype.startsWith('video/');
-    const folder = isVideo ? 'videos' : 'pdfs';
-    const contentUrl = `/uploads/${folder}/${file.filename}`;
-
-    // جلب الدرس لحذف الملف القديم
-    // Fetch lesson to delete old file
-    const lesson = await courseRepository.findLessonById(lessonId);
-    if (lesson && lesson.content_url) {
-        const oldPath = lesson.content_url.replace('/uploads/', 'uploads/');
-        if (fs.existsSync(oldPath)) {
-            fs.unlinkSync(oldPath);
-        }
+    const updateData = {};
+    if (file.mimetype.startsWith('video/')) {
+        updateData.video_url = fileUrl;
+    } else if (file.mimetype === 'application/pdf') {
+        updateData.pdf_url = fileUrl;
     }
 
-    await courseRepository.updateLessonContent(lessonId, contentUrl);
+    // 3. تحديث قاعدة البيانات عبر الـ Repository
+    const success = await courseRepository.updateLessonContent(lessonId, updateData);
 
-    return { content_url: contentUrl };
+    if (!success) {
+        throw new Error('فشل تحديث بيانات الدرس / Failed to update lesson');
+    }
+
+    return {
+        url: fileUrl,
+        type: file.mimetype
+    };
 };
 
 /**
@@ -601,6 +645,7 @@ module.exports = {
     getTeacherCourses,
     getCourseDetails,
     updateCourse,
+    toggleCoursePublishStatus,
     updateCourseThumbnail,
     deleteCourse,
     createChapter,

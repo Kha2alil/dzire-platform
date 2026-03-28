@@ -43,7 +43,9 @@ const updateCourseSchema = Joi.object({
 
     difficulty_level: Joi.string()
         .valid('beginner', 'intermediate', 'advanced')
-        .optional()
+        .optional(),
+    is_published: Joi.boolean()
+        .optional()    
 }).min(1); // يجب تحديث حقل واحد على الأقل / at least one field must be updated
 
 // ============================================================
@@ -112,6 +114,13 @@ const createAssessmentSchema = Joi.object({
         .valid('quiz', 'final_exam')
         .required(),
 
+    // 💡 السطر الجديد المضاف هنا:
+    passing_score: Joi.number()
+        .integer()
+        .min(1)
+        .max(100)
+        .required(), // إلزامي لكي نضمن وجود درجة نجاح لكل اختبار
+
     questions: Joi.array().items(
         Joi.object({
             question_text: Joi.string().required(),
@@ -124,7 +133,7 @@ const createAssessmentSchema = Joi.object({
             points: Joi.number().integer().min(1).default(1),
             order_index: Joi.number().integer().min(0).required()
         })
-    ).min(1).required()                  // يجب وجود سؤال واحد على الأقل / at least one question
+    ).min(1).required() 
 });
 
 // ============================================================

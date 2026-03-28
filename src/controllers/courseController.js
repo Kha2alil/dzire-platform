@@ -75,6 +75,32 @@ const updateCourse = async (req, res, next) => {
 };
 
 /**
+ * تغيير حالة الكورس (نشر / مسودة)
+ * Toggle course publish status
+ * PATCH /api/courses/:courseId/publish
+ */
+const togglePublishStatus = async (req, res, next) => {
+    try {
+        // نمرر حالة النشر الجديدة (true أو false) للـ Service
+        const course = await courseService.toggleCoursePublishStatus(
+            req.params.courseId, 
+            req.user.id, 
+            req.body.is_published
+        );
+        
+        res.status(200).json({
+            success: true,
+            message: req.body.is_published 
+                ? 'تم نشر الكورس بنجاح / Course published successfully' 
+                : 'تم تحويل الكورس إلى مسودة / Course moved to draft',
+            data: { course }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
  * رفع صورة غلاف الكورس
  * Upload course thumbnail
  * POST /api/courses/:courseId/thumbnail
@@ -412,12 +438,14 @@ const searchCourses = async (req, res, next) => {
         next(error);
     }
 };
+
 module.exports = {
     createCourse,
     getTeacherCourses,
     getCourseDetails,
     updateCourse,
     uploadThumbnail,
+    togglePublishStatus,
     deleteCourse,
     createChapter,
     deleteChapter,
