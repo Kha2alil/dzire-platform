@@ -376,11 +376,158 @@ const searchCourses = async (teacherId, filters) => {
     const [rows] = await db.query(query, values);
     return rows;
 };
+// 1. جلب كل فصول كورس معين مرتبة حسب order_index
+const getAllChapters = async (courseId) => {
+    const query = `SELECT * FROM chapters WHERE course_id = ? ORDER BY order_index ASC`;
+    const [rows] = await db.query(query, [courseId]);
+    return rows;
+};
+// src/repositories/courseRepository.js
+const getAssessmentResult = async (studentId, chapterId) => {
+    // قمت بإزالة sa.created_at واستبدالها بـ sa.id للترتيب أو تركها بدون ترتيب
+    const query = `
+        SELECT sa.score, a.passing_score 
+        FROM student_assessments sa
+        JOIN assessments a ON sa.assessment_id = a.id
+        WHERE sa.student_id = ? AND a.chapter_id = ?
+        ORDER BY sa.id DESC LIMIT 1`; 
+    
+    const [rows] = await db.query(query, [studentId, chapterId]);
+    
+    if (rows.length === 0) return null;
 
+    const result = rows[0];
+    
+    // نقارن السكور بالدرجة المطلوبة لنحدد الحالة برمجياً
+    return {
+        score: result.score,
+        passing_score: result.passing_score,
+        status: result.score >= result.passing_score ? 'passed' : 'failed'
+    };
+};
+// 2. جلب إجمالي دروس الكورس (لأن النسبة المئوية تعتمد على إجمالي الحصص)
+const getLessonsByChapter = async (chapterId) => {
+    const [rows] = await db.query(
+        "SELECT id, title, order_index, is_free, xp_reward FROM lessons WHERE chapter_id = ? ORDER BY order_index",
+        [chapterId]
+    );
+    return rows;
+};
+const getLessonById = async (lessonId) => {
+    const [rows] = await db.query(
+        `SELECT id, title, video_url, pdf_url, summary_text, 
+                content_type, content_url, order_index, xp_reward 
+         FROM lessons WHERE id = ?`,
+        [lessonId]
+    );
+    return rows[0];
+};
+// 3. جلب عدد الحصص الموجودة في الفصول التي تسبق الفصل الحالي
+const getTotalCourseLessons = async (courseId) => {
+    const [rows] = await db.query(
+        "SELECT COUNT(*) as total FROM lessons WHERE course_id = ?",
+        [courseId]
+    );
+    return rows[0].total || 0;
+};
+
+const getEnrollmentData = async (studentId, courseId) => {
+    const [rows] = await db.query(
+        "SELECT progress_percentage FROM enrollments WHERE student_id = ? AND course_id = ?",
+        [studentId, courseId]
+    );
+    return rows[0];
+};
+
+const getRawContentsByLesson = async (courseId, chapterId, lessonId) => {
+    const query = `
+        SELECT c.*, l.order_index, l.xp_reward 
+        FROM contents c
+        JOIN lessons l ON c.lesson_id = l.id
+        WHERE c.lesson_id = ? AND l.chapter_id = ? AND l.course_id = ?
+    `;
+    const [rows] = await db.query(query, [lessonId, chapterId, courseId]);
+    return rows;
+};
+
+const updateStudentXP = async (executor, studentId, xpAmount) => {
+    const query = `
+        UPDATE gamification_stats 
+        SET total_xp = total_xp + ?, updated_at = NOW() 
+        WHERE student_id = ?`;
+    await executor.query(query, [xpAmount, studentId]);
+};
+// ب. تحديث نسبة التقدم في جدول enrollments
+const updateEnrollmentProgress = async (executor, studentId, courseId, lessonOrderIndex) => {
+    // 1. حساب قيمة الخطوة الواحدة (مثلاً 10%)
+    const [rows] = await executor.query(
+        "SELECT COUNT(*) as total FROM lessons WHERE course_id = ?", 
+        [courseId]
+    );
+    const totalLessons = rows[0].total || 1;
+    const progressStep = 100 / totalLessons;
+
+    // 2. التحديث بشرط: لا تزد التقدم إلا إذا كان الدرس المكتمل هو "الدرس التالي" فعلياً
+    // هذا يمنع زيادة التقدم إذا أعاد الطالب درساً قديماً
+    const updateQuery = `
+        UPDATE enrollments 
+        SET progress_percentage = LEAST(progress_percentage + ?, 100)
+        WHERE student_id = ? AND course_id = ? 
+        AND (progress_percentage / ?) < ?`; // شرط: التقدم الحالي أقل من ترتيب هذا الدرس
+    
+    const [result] = await executor.query(updateQuery, [progressStep, studentId, courseId, progressStep, lessonOrderIndex]);
+    return result.affectedRows > 0; // سنعرف إذا تم التحديث فعلاً أم لا
+};
+
+const checkLessonBelongsToChapter = async (lessonId, chapterId) => {
+    const query = `SELECT id FROM lessons WHERE id = ? AND chapter_id = ?`;
+    const [rows] = await db.query(query, [lessonId, chapterId]);
+    return rows.length > 0;
+};
+
+
+// إضافة هذه الدوال في ملف courseRepository.js
+
+// 1. جلب الكورسات المتاحة (المنشورة فقط)
+const findAvailableCourses = async () => {
+    const query = `
+        SELECT 
+            c.id, c.title, c.description, c.thumbnail_url, c.difficulty_level,
+            u.full_name AS teacher_name,
+            s.name AS subdomain_name
+        FROM courses c
+        JOIN users u ON c.teacher_id = u.id
+        JOIN subdomains s ON c.subdomain_id = s.id
+        WHERE c.is_published = 1
+        ORDER BY c.created_at DESC
+    `;
+    const [rows] = await db.query(query);
+    return rows;
+};
+
+// 2. جلب الكورسات التي سجل فيها طالب معين
+const findEnrolledCoursesByStudent = async (studentId) => {
+    const query = `
+        SELECT 
+            c.id, c.title, c.thumbnail_url, 
+            e.progress_percentage, e.status, e.enrolled_at,
+            u.full_name as teacher_name
+        FROM courses c
+        JOIN enrollments e ON c.id = e.course_id
+        JOIN users u ON c.teacher_id = u.id
+        WHERE e.student_id = ?
+    `;
+    const [rows] = await db.query(query, [studentId]);
+    return rows;
+};
+
+// لا تنسَ إضافتهم في module.exports في نهاية الملف
 module.exports = {
     createCourse, findCourseById, findCoursesByTeacher, updateCourse, updateCourseThumbnail, deleteCourse,
     createChapter, findChaptersByCourse, findChapterById, updateChapter, deleteChapter,
     createLesson, updateLesson, updateLessonContent, findLessonsByChapter, findLessonById, deleteLesson,
     createAssessment, findAssessmentById, findAssessmentsByChapter, updateAssessment, deleteAssessment,
-    updateQuestion, addQuestion, deleteQuestion, findQuestionById, searchCourses, findQuestionsByAssessmentId
+    updateQuestion, addQuestion, deleteQuestion, findQuestionById, searchCourses, findQuestionsByAssessmentId ,     
+    getAllChapters, getAssessmentResult, getLessonsByChapter, getLessonById, getTotalCourseLessons,
+    getEnrollmentData, getRawContentsByLesson, updateStudentXP, updateEnrollmentProgress, checkLessonBelongsToChapter , findAvailableCourses, findEnrolledCoursesByStudent
 };

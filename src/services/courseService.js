@@ -632,10 +632,200 @@ const searchCourses = async (teacherId, filters) => {
 
     return courseRepository.searchCourses(teacherId, filters);
 };
+const getStudentCourseProgress = async (studentId, courseId) => {
+    try {
+        // 1. استدعاء الدالة من طبقة الـ Repository
+        const enrollment = await courseRepository.getEnrollmentData(studentId, courseId);
 
-module.exports = {
-    // ... الموجود
-    searchCourses
+        // 2. التحقق مما إذا كان هناك بيانات (إذا كان الطالب مسجلاً فعلاً)
+        if (!enrollment) {
+            // نرجع كائن افتراضي بنسبة 0 لتجنب توقف واجهة Dzire
+            return {
+                percentage: 0,
+                last_accessed: null,
+                isEnrolled: false
+            };
+        }
+
+        // 3. تنسيق البيانات المستخرجة من الـ Repository
+        return {
+            // نستخدم الأسماء البرمجية الواضحة للـ Frontend
+            percentage: parseFloat(enrollment.progress_percentage) || 0,
+            last_accessed: enrollment.last_accessed || null,
+            isEnrolled: true
+        };
+
+    } catch (error) {
+        // تسجيل الخطأ داخلياً ورميه ليصل للـ Controller
+        console.error("Error in courseService.getStudentCourseProgress:", error.message);
+        throw error; 
+    }
+};
+const trackProgress = async (userId, courseId) => {
+    if (!userId || !courseId) {
+        throw new Error("UserID and CourseID are required to track progress");
+    }
+
+    // استدعاء دالة التحديث من الـ Repository
+    const newPercentage = await courseRepository.updateEnrollmentProgress(userId, courseId);
+
+    return {
+        success: true,
+        updatedProgress: `${newPercentage.toFixed(2)}%`,
+        isCompleted: newPercentage >= 100
+    };
+};
+
+const getChaptersList = async (studentId, courseId) => {
+    const chapters = await courseRepository.getAllChapters(courseId);
+    
+    return await Promise.all(chapters.map(async (chapter, index) => {
+        // 1. الفصل الأول مفتوح دائماً كبداية
+        if (chapter.order_index === 1) return { ...chapter, is_locked: false };
+
+        // 2. الوصول للفصل السابق
+        const previousChapter = chapters[index - 1];
+
+        // 3. التحقق من نتيجة الطالب في اختبار الفصل السابق
+        const assessmentResult = await courseRepository.getAssessmentResult(studentId, previousChapter.id);
+
+        // 4. منطق القفل:
+        // يغلق الفصل إذا لم يوجد سجل اختبار، أو إذا كانت الحالة ليست 'passed'
+        const isLocked = !assessmentResult || assessmentResult.status !== 'passed';
+
+        return {
+            ...chapter,
+            is_locked: isLocked
+        };
+    }));
+};
+const getLessonsList = async (studentId, courseId, chapterId) => {
+    // 1. جلب البيانات من الـ Repository
+    const lessons = await courseRepository.getLessonsByChapter(chapterId);
+    const enrollment = await courseRepository.getEnrollmentData(studentId, courseId);
+    const totalInCourse = await courseRepository.getTotalCourseLessons(courseId);
+
+    // 2. حسابات التقدم
+    const currentProgress = enrollment?.progress_percentage || 0;
+    const lessonWeight = 100 / (totalInCourse || 1);
+
+    // 3. تحديد حالة كل درس (مفتوح/مغلق)
+    return lessons.map(lesson => {
+        // الدرس الأول مفتوح دائماً، البقية تعتمد على التقدم الحالي
+        const requiredProgress = (lesson.order_index - 1) * lessonWeight;
+        
+        return {
+            ...lesson,
+            is_locked: lesson.order_index > 1 && currentProgress < (requiredProgress - 0.5)
+        };
+    });
+};
+
+const getLessonContent = async (studentId, courseId, lessonId) => {
+    // 1. جلب بيانات الدرس والتقدم وإجمالي الدروس
+    const lesson = await courseRepository.getLessonById(lessonId);
+    const enrollment = await courseRepository.getEnrollmentData(studentId, courseId);
+    const totalLessons = await courseRepository.getTotalCourseLessons(courseId);
+
+    if (!lesson) throw new Error("الدرس غير موجود");
+
+    // 2. حساب "الوزن" والنسبة المطلوبة لفتح هذا الدرس
+    const currentProgress = enrollment?.progress_percentage || 0;
+    const lessonWeight = 100 / (totalLessons || 1);
+    const requiredProgress = (lesson.order_index - 1) * lessonWeight;
+
+    // 3. فحص الأمان: منع الوصول إذا كان الدرس مغلقاً (إلا الدرس الأول)
+    if (lesson.order_index > 1 && currentProgress < (requiredProgress - 0.5)) {
+        throw new Error("هذا الدرس مغلق حالياً، أكمل الدروس السابقة أولاً");
+    }
+
+    // 4. تنسيق النتيجة النهائية للـ Frontend
+    return {
+        title: lesson.title,
+        video: lesson.video_url || lesson.content_url, // دعم العمودين حسب جدولك
+        pdf: lesson.pdf_url,
+        description: lesson.summary_text,
+        xp: lesson.xp_reward
+    };
+};
+
+
+
+
+const getFormattedContents = async (studentId, courseId, chapterId, lessonId) => {
+    // 1. جلب المحتويات الخام
+    const rawData = await courseRepository.getRawContentsByLesson(courseId, chapterId, lessonId);
+    if (rawData.length === 0) throw new Error("No contents found for this lesson");
+
+    // 2. التحقق من حالة القفل (Security Check)
+    const [enrollment] = await db.query(
+        "SELECT progress_percentage FROM enrollments WHERE student_id = ? AND course_id = ?",
+        [studentId, courseId]
+    );
+    const currentProgress = enrollment[0]?.progress_percentage || 0;
+
+    const [totalInCourse] = await db.query("SELECT COUNT(*) as count FROM lessons WHERE course_id = ?", [courseId]);
+    const lessonWeight = 100 / (totalInCourse[0].count || 1);
+
+    const lessonOrder = rawData[0].order_index;
+    const requiredProgress = (lessonOrder - 1) * lessonWeight;
+
+    if (lessonOrder > 1 && currentProgress < (requiredProgress - 0.5)) {
+        throw new Error("Locked: Complete previous lessons to unlock this content");
+    }
+
+    // 3. توزيع المحتويات حسب النوع (كما طلبت في البداية)
+    return {
+        video: rawData.find(item => item.content_type === 'video') || null,
+        pdf: rawData.find(item => item.content_type === 'pdf') || null,
+        quiz: rawData.find(item => item.content_type === 'quiz') || null,
+        xp_reward: rawData[0].xp_reward // المكافأة التي سينالها عند الضغط على "إكمال"
+    };
+};
+
+
+const finishLessonAndAwardXP = async (studentId, courseId, chapterId, lessonId, xp_reward) => {
+    // 1. جلب بيانات الدرس أولاً لمعرفة ترتيبه (order_index)
+    const lesson = await courseRepository.getLessonById(lessonId);
+    if (!lesson) throw new Error("الدرس غير موجود");
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        // 2. محاولة تحديث التقدم (ستنجح فقط إذا كان الدرس جديداً على الطالب)
+        const isUpdated = await courseRepository.updateEnrollmentProgress(
+            connection, 
+            studentId, 
+            courseId, 
+            lesson.order_index
+        );
+
+        if (isUpdated) {
+            // 3. نزيد الـ XP فقط إذا زاد التقدم (أي أن الدرس لم يسبق إكماله)
+            await courseRepository.updateStudentXP(connection, studentId, xp_reward);
+            await connection.commit();
+            return { message: "أحسنت! تم تحديث التقدم ومنحك XP" };
+        } else {
+            // إذا لم يتأثر أي سطر، فهذا يعني أن الطالب أعاد درساً قديماً
+            await connection.rollback();
+            return { message: "لقد أتممت هذا الدرس سابقاً، لن يتم إضافة XP جديد" };
+        }
+    } catch (error) {
+        await connection.rollback();
+        throw error;
+    } finally {
+        connection.release();
+    }
+};
+
+const getAllAvailableCourses = async () => {
+    // يمكن إضافة منطق إضافي هنا (مثل استثناء الكورسات التي سجل فيها الطالب بالفعل)
+    return await courseRepository.findAvailableCourses();
+};
+const getStudentDashboard = async (studentId) => {
+    // يمكن هنا مستقبلاً إضافة منطق لجلب "آخر درس شاهده الطالب"
+    return await courseRepository.findEnrolledCoursesByStudent(studentId);
 };
 // ============================================================
 // Exports
@@ -661,5 +851,15 @@ module.exports = {
     deleteQuestion,
     updateChapter,
     updateLesson,
-    searchCourses
+    searchCourses,
+    getStudentCourseProgress,
+    trackProgress,
+    getChaptersList,
+    getLessonsList,
+    getLessonContent,
+    getFormattedContents,
+    finishLessonAndAwardXP,
+    getAllAvailableCourses ,
+    getStudentDashboard
+
 };
