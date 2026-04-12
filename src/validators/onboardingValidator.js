@@ -55,15 +55,26 @@ const OnboardingValidator = {
     return errors;
   },
 
+  /**
+   * Validate the skip-onboarding body.
+   * level is optional — when provided it must be a known value.
+   * When omitted the service defaults to 'beginner'.
+   */
   validateSkip(body) {
     const errors = [];
-    const { subdomain_id, domain_id } = body;
+    const { subdomain_id, domain_id, level } = body;
 
     if (!subdomain_id || String(subdomain_id).trim() === '')
       errors.push('subdomain_id is required.');
 
     if (!domain_id || String(domain_id).trim() === '')
       errors.push('domain_id is required.');
+
+    // level is optional, but if provided it must be valid
+    if (level !== undefined && level !== null && level !== '') {
+      if (!VALID_LEVELS.includes(String(level).trim()))
+        errors.push(`level must be one of: ${VALID_LEVELS.join(', ')}.`);
+    }
 
     return errors;
   },

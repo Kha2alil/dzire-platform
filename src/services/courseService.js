@@ -21,9 +21,6 @@ const fs = require('fs');
  * @returns {Object} - الكورس المُنشأ / Created course
  */
 const createCourse = async (teacherUser, courseData) => {
-
-    // الخطوة 1: تحقق من البيانات
-    // Step 1: Validate data
     const { valid, messages, value } = validateCreateCourse(courseData);
     if (!valid) {
         const error = new Error('بيانات غير صحيحة / Invalid data');
@@ -32,8 +29,7 @@ const createCourse = async (teacherUser, courseData) => {
         throw error;
     }
 
-    // الخطوة 2: أنشئ الكورس في DB
-    // Step 2: Create the course in DB
+    // ✅ teacher_id + all validated fields including default_xp_reward
     const course = await courseRepository.createCourse({
         ...value,
         teacher_id: teacherUser.id

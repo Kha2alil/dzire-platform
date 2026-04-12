@@ -6,11 +6,20 @@ const db = require('../config/database');
 
 const createCourse = async (courseData) => {
     const { teacher_id, title, description, subdomain_id, difficulty_level } = courseData;
+
     const query = `
         INSERT INTO courses (teacher_id, title, description, subdomain_id, difficulty_level)
         VALUES (?, ?, ?, ?, ?)
     `;
-    const [result] = await db.query(query, [teacher_id, title, description, subdomain_id, difficulty_level]);
+
+    const [result] = await db.query(query, [
+        teacher_id,
+        title,
+        description || null,
+        subdomain_id,
+        difficulty_level
+    ]);
+
     return findCourseById(result.insertId);
 };
 

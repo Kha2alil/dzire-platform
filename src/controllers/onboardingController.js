@@ -40,29 +40,31 @@ const OnboardingController = {
       const domains = await OnboardingService.getDomains();
       return res.status(200).json({ success: true, domains });
     } catch (err) {
-      console.error('[OnboardingController.getDomains]', err);
-      return sendError(res, 500, ['Internal server error.']);
+      console.error('[OnboardingController.getDomains] REAL ERROR:', err.message, err.stack);
+      return sendError(res, 500, [err.message || 'Failed to load domains.']);
     }
   },
 
   async getSubdomains(req, res) {
-      try {
-        // إذا كان المستخدم طالباً (أو لم يرسل domain_id)، نطبق شرط الـ Validator
-        // أما إذا تم تمرير الطلب بدون domain_id للمعلم، سنتجاوز الـ Validator
-        if (req.query.domain_id) {
-          const errors = OnboardingValidator.validateDomainId(req.query);
-          if (errors.length) return sendError(res, 400, errors);
-        }
+    try {
+      const domainId = req.query.domain_id || null;
 
-        // إرسال domain_id إن وجد، أو undefined ليجلب السيرفر كل التخصصات
-        const subdomains = await OnboardingService.getSubdomains(req.query.domain_id || null);
-        return res.status(200).json({ success: true, subdomains });
-
-      } catch (err) {
-        console.error('[OnboardingController.getSubdomains]', err);
-        return sendError(res, err.statusCode || 500, [err.message]);
+      if (domainId) {
+        const errors = OnboardingValidator.validateDomainId(req.query);
+        if (errors.length) return sendError(res, 400, errors);
       }
-    },
+
+      const subdomains = await OnboardingService.getSubdomains(domainId);
+      return res.status(200).json({ success: true, subdomains });
+
+    } catch (err) {
+      console.error('[OnboardingController.getSubdomains] REAL ERROR:', err.message);
+      if (err.statusCode === 404) {
+        return res.status(200).json({ success: true, subdomains: [] });
+      }
+      return sendError(res, err.statusCode || 500, [err.message]);
+    }
+  },
 
   async getQuestions(req, res) {
     try {
@@ -109,22 +111,31 @@ const OnboardingController = {
     }
   },
 
+  /**
+   * POST /api/onboarding/skip
+   *
+   * Accepts { domain_id, subdomain_id, level? } and writes a placement_result
+   * row so the student is marked as onboarded.  The `level` field from the
+   * request body is forwarded to the service so the student's self-assessed
+   * level is stored correctly (previously it was always hardcoded to 'beginner').
+   */
   async skipTest(req, res) {
     try {
       const errors = OnboardingValidator.validateSkip(req.body);
       if (errors.length) return sendError(res, 400, errors);
 
-      const { subdomain_id, domain_id } = req.body;
+      const { subdomain_id, domain_id, level } = req.body;
 
       const result = await OnboardingService.skipToLevel({
         studentId:   req.user.id,
         subdomainId: subdomain_id,
         domainId:    domain_id,
+        level,                    // ← pass it through; service defaults to 'beginner' if absent
       });
 
       return res.status(200).json({
         success: true,
-        message: 'Onboarding complete. Starting at beginner level.',
+        message: `Onboarding complete. Starting at ${result.assignedLevel} level.`,
         ...result,
       });
 
