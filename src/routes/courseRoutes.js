@@ -24,6 +24,13 @@ router.use(authMiddleware);
 // POST   /api/courses/:courseId/thumbnail → رفع صورة الغلاف / Upload thumbnail
 // search
 // GET /api/courses/search?title=python&level=beginner
+
+
+// جلب كورسات المتاحة للجميع (المنشورة فقط)
+
+router.get('/available', authMiddleware, roleMiddleware('student'), courseController.getAvailableCourses);
+router.get('/enrolled', authMiddleware, roleMiddleware('student'), courseController.getMyCourses);
+
 router.get(
     '/search',
     roleMiddleware('teacher'),
@@ -146,5 +153,32 @@ router.patch(
     courseController.updateLesson
 );
 
+
+// 1. جلب قائمة الفصول لكورس معين (مع حالة القفل)
+router.get('/:courseId/chapters', roleMiddleware('student'), courseController.getChapters);
+
+// 2. جلب قائمة الدروس داخل فصل معين
+router.get('/:courseId/chapters/:chapterId/lessons', roleMiddleware('student'), courseController.getLessons);
+
+
+/**
+ * مسارات الدروس والمحتوى (Lessons)
+ */
+
+// 3. جلب تفاصيل درس معين (الفيديو، PDF، إلخ)
+router.get('/:courseId/lessons/:lessonId', roleMiddleware('student'), courseController.getLessonDetails);
+
+// 4. إكمال الدرس وتحديث الـ XP والتقدم
+router.post('/complete-lesson', roleMiddleware('student'), courseController.finishLesson);
+
+/**
+ * مسارات التقدم العام (Progress)
+ */
+
+// 5. جلب نسبة تقدم الطالب الحالية في الكورس
+router.get('/:courseId/progress', roleMiddleware('student'), courseController.getProgress);
+
+// مسار الكورسات المتاحة للجميع (Explore)
+// تأكد من استيراد roleMiddleware و authMiddleware
 
 module.exports = router;

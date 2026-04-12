@@ -40,5 +40,22 @@ const searchStudents = async (teacherId, filters) => {
     const [rows] = await db.query(query, values);
     return rows;
 };
+const enrollStudent = async (studentId, courseId) => {
+    const query = `
+        INSERT INTO enrollments (student_id, course_id, progress_percentage, status, enrolled_at)
+        VALUES (?, ?, 0, 'active', NOW())
+    `;
+    const [result] = await db.query(query, [studentId, courseId]);
+    return result.insertId;
+};
 
-module.exports = { searchStudents };
+/**
+ * التحقق مما إذا كان الطالب مسجلاً بالفعل
+ */
+const findEnrollment = async (studentId, courseId) => {
+    const query = `SELECT * FROM enrollments WHERE student_id = ? AND course_id = ? LIMIT 1`;
+    const [rows] = await db.query(query, [studentId, courseId]);
+    return rows[0];
+};
+
+module.exports = { searchStudents , enrollStudent, findEnrollment };

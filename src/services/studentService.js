@@ -23,4 +23,12 @@ const searchStudents = async (teacherId, filters) => {
     return studentRepository.searchStudents(teacherId, filters);
 };
 
-module.exports = { searchStudents };
+const enrollInCourse = async (studentId, courseId) => {
+    const existingEnrollment = await studentRepository.findEnrollment(studentId, courseId);
+    if (existingEnrollment) {
+        throw new Error('You are already enrolled in this course');
+    }
+    return await studentRepository.enrollStudent(studentId, courseId);
+};
+
+module.exports = { searchStudents, enrollInCourse };
