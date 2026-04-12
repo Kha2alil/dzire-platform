@@ -83,15 +83,15 @@ const togglePublishStatus = async (req, res, next) => {
     try {
         // نمرر حالة النشر الجديدة (true أو false) للـ Service
         const course = await courseService.toggleCoursePublishStatus(
-            req.params.courseId, 
-            req.user.id, 
+            req.params.courseId,
+            req.user.id,
             req.body.is_published
         );
-        
+
         res.status(200).json({
             success: true,
-            message: req.body.is_published 
-                ? 'تم نشر الكورس بنجاح / Course published successfully' 
+            message: req.body.is_published
+                ? 'تم نشر الكورس بنجاح / Course published successfully'
                 : 'تم تحويل الكورس إلى مسودة / Course moved to draft',
             data: { course }
         });
@@ -488,7 +488,7 @@ const getChapters = async (req, res) => {
 
         // تعديل: نستخدم courseService بدلاً من chapterService
         const data = await courseService.getChaptersList(studentId, courseId);
-        
+
         res.status(200).json({ success: true, data });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -513,15 +513,14 @@ const getLessons = async (req, res) => {
     }
 };
 
-// 3. جلب المحتويات
 const getLessonContents = async (req, res) => {
     try {
         const { courseId, chapterId, lessonId } = req.params;
         const studentId = req.user.id;
 
-        // تعديل: نستخدم courseService بدلاً من contentService
+
         const detailedContents = await courseService.getFormattedContents(studentId, courseId, chapterId, lessonId);
-        
+
         res.status(200).json({ success: true, data: detailedContents });
     } catch (error) {
         const statusCode = error.message.includes("Locked") ? 403 : 500;
@@ -554,24 +553,24 @@ const finishLesson = async (req, res) => {
     try {
         // 1. استخراج البيانات من الطلب القادم من Postman
         const { courseId, chapterId, lessonId, xp_reward } = req.body;
-        
+
         // 2. استخراج معرف الطالب من التوكن (عبر الميدل وير auth)
         const studentId = req.user.id;
 
         // 3. التحقق من وجود الحقول الأساسية لضمان عدم توقف السيرفر
         if (!courseId || !chapterId || !lessonId) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "Missing required fields: courseId, chapterId, or lessonId" 
+            return res.status(400).json({
+                success: false,
+                message: "Missing required fields: courseId, chapterId, or lessonId"
             });
         }
 
         // 4. استدعاء الخدمة (الالتزام بالاسم المتفق عليه)
         // تأكد أن الترتيب هنا يطابق الترتيب في ملف الـ Service
         const result = await courseService.finishLessonAndAwardXP(
-            studentId, 
-            courseId, 
-            chapterId, 
+            studentId,
+            courseId,
+            chapterId,
             lessonId,
             xp_reward || 0
         );
@@ -585,9 +584,9 @@ const finishLesson = async (req, res) => {
 
     } catch (error) {
         // إذا رمت الخدمة خطأ (مثل: الدرس لا ينتمي للفصل)، سيتم التقاطه هنا
-        res.status(500).json({ 
-            success: false, 
-            message: error.message 
+        res.status(500).json({
+            success: false,
+            message: error.message
         });
     }
 };
@@ -596,13 +595,19 @@ const finishLesson = async (req, res) => {
 // جلب الكورسات المتاحة للتسجيل
 const getAvailableCourses = async (req, res) => {
     try {
-        const courses = await courseService.getAllAvailableCourses();
+        // 1. استخراج معرف الطالب من التوكن (تأكد أن Middleware يضعه في req.user)
+        const studentId = req.user.id;
+
+        // 2. تمرير المعرف للخدمة (Service) ثم للـ Repository
+        const courses = await courseService.getAvailableCourses(studentId);
+
         res.status(200).json({
             success: true,
             count: courses.length,
             data: { courses }
         });
     } catch (error) {
+        console.error("Error in getAvailableCourses Controller:", error);
         res.status(500).json({
             success: false,
             message: "خطأ في جلب الكورسات المتاحة",
@@ -611,15 +616,18 @@ const getAvailableCourses = async (req, res) => {
     }
 };
 // جلب كورسات الطالب (My Courses)
+// داخل courseController.js
 const getMyCourses = async (req, res) => {
     try {
-        const studentId = req.user.id; 
+        const studentId = req.user.id; // المعرف المستخرج من الـ Token
         const enrolledCourses = await courseService.getStudentDashboard(studentId);
-        
+
         res.status(200).json({
             success: true,
             count: enrolledCourses.length,
-            data: { courses: enrolledCourses }
+            data: {
+                courses: enrolledCourses // كل كورس هنا سيحتوي الآن على last_completed_order
+            }
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -647,7 +655,7 @@ module.exports = {
     deleteQuestion,
     updateChapter,
     updateLesson,
-    searchCourses ,
+    searchCourses,
     getProgress,
     updateProgress,
     getChapters,

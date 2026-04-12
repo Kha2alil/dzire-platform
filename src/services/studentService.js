@@ -24,16 +24,11 @@ const searchStudents = async (teacherId, filters) => {
 };
 
 const enrollInCourse = async (studentId, courseId) => {
-    // 1. التحقق من وجود التسجيل مسبقاً
     const existingEnrollment = await studentRepository.findEnrollment(studentId, courseId);
     if (existingEnrollment) {
         throw new Error('You are already enrolled in this course');
     }
-
-    // 2. هنا يمكن إضافة منطق Adaptive (مثلاً: هل أنهى المتطلبات السابقة؟)
-
-    // 3. تنفيذ التسجيل
     return await studentRepository.enrollStudent(studentId, courseId);
 };
 
-module.exports = { searchStudents , enrollInCourse };
+module.exports = { searchStudents, enrollInCourse };

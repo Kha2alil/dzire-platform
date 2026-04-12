@@ -1,4 +1,6 @@
 const courseRepository = require('../repositories/courseRepository');
+const db = require('../config/database.js'); // أو المسار الذي يحتوي على ملف الاتصال بـ MySQL
+
 const {
     validateCreateCourse,
     validateUpdateCourse,
@@ -86,9 +88,9 @@ const getCourseDetails = async (courseId, teacherId) => {
                 })
             );
 
-            return { 
-                ...chapter, 
-                lessons, 
+            return {
+                ...chapter,
+                lessons,
                 assessments: assessmentsWithQuestions // نمرر الاختبارات بأسئلتها
             };
         })
@@ -146,7 +148,7 @@ const toggleCoursePublishStatus = async (courseId, teacherId, isPublished) => {
 
     // الخطوة 3: تحديث الحقل is_published في قاعدة البيانات
     const updated = await courseRepository.updateCourse(courseId, { is_published: isPublished });
-    
+
     if (!updated) {
         const error = new Error('فشل تحديث حالة الكورس');
         error.statusCode = 500;
@@ -634,12 +636,10 @@ const searchCourses = async (teacherId, filters) => {
 };
 const getStudentCourseProgress = async (studentId, courseId) => {
     try {
-        // 1. استدعاء الدالة من طبقة الـ Repository
         const enrollment = await courseRepository.getEnrollmentData(studentId, courseId);
 
-        // 2. التحقق مما إذا كان هناك بيانات (إذا كان الطالب مسجلاً فعلاً)
         if (!enrollment) {
-            // نرجع كائن افتراضي بنسبة 0 لتجنب توقف واجهة Dzire
+
             return {
                 percentage: 0,
                 last_accessed: null,
@@ -647,26 +647,23 @@ const getStudentCourseProgress = async (studentId, courseId) => {
             };
         }
 
-        // 3. تنسيق البيانات المستخرجة من الـ Repository
         return {
-            // نستخدم الأسماء البرمجية الواضحة للـ Frontend
+
             percentage: parseFloat(enrollment.progress_percentage) || 0,
             last_accessed: enrollment.last_accessed || null,
             isEnrolled: true
         };
 
     } catch (error) {
-        // تسجيل الخطأ داخلياً ورميه ليصل للـ Controller
         console.error("Error in courseService.getStudentCourseProgress:", error.message);
-        throw error; 
+        throw error;
     }
 };
+
 const trackProgress = async (userId, courseId) => {
     if (!userId || !courseId) {
         throw new Error("UserID and CourseID are required to track progress");
     }
-
-    // استدعاء دالة التحديث من الـ Repository
     const newPercentage = await courseRepository.updateEnrollmentProgress(userId, courseId);
 
     return {
@@ -678,7 +675,7 @@ const trackProgress = async (userId, courseId) => {
 
 const getChaptersList = async (studentId, courseId) => {
     const chapters = await courseRepository.getAllChapters(courseId);
-    
+
     return await Promise.all(chapters.map(async (chapter, index) => {
         // 1. الفصل الأول مفتوح دائماً كبداية
         if (chapter.order_index === 1) return { ...chapter, is_locked: false };
@@ -713,7 +710,7 @@ const getLessonsList = async (studentId, courseId, chapterId) => {
     return lessons.map(lesson => {
         // الدرس الأول مفتوح دائماً، البقية تعتمد على التقدم الحالي
         const requiredProgress = (lesson.order_index - 1) * lessonWeight;
-        
+
         return {
             ...lesson,
             is_locked: lesson.order_index > 1 && currentProgress < (requiredProgress - 0.5)
@@ -787,17 +784,20 @@ const getFormattedContents = async (studentId, courseId, chapterId, lessonId) =>
 const finishLessonAndAwardXP = async (studentId, courseId, chapterId, lessonId, xp_reward) => {
     // 1. جلب بيانات الدرس أولاً لمعرفة ترتيبه (order_index)
     const lesson = await courseRepository.getLessonById(lessonId);
-    if (!lesson) throw new Error("الدرس غير موجود");
 
+    if (!lesson) {
+        console.error(`Lesson not found: ${lessonId}`);
+        throw new Error("the lesson does not exist");
+    }
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
 
         // 2. محاولة تحديث التقدم (ستنجح فقط إذا كان الدرس جديداً على الطالب)
         const isUpdated = await courseRepository.updateEnrollmentProgress(
-            connection, 
-            studentId, 
-            courseId, 
+            connection,
+            studentId,
+            courseId,
             lesson.order_index
         );
 
@@ -805,11 +805,11 @@ const finishLessonAndAwardXP = async (studentId, courseId, chapterId, lessonId, 
             // 3. نزيد الـ XP فقط إذا زاد التقدم (أي أن الدرس لم يسبق إكماله)
             await courseRepository.updateStudentXP(connection, studentId, xp_reward);
             await connection.commit();
-            return { message: "أحسنت! تم تحديث التقدم ومنحك XP" };
+            return { message: "Great! Progress updated and XP awarded" };
         } else {
             // إذا لم يتأثر أي سطر، فهذا يعني أن الطالب أعاد درساً قديماً
             await connection.rollback();
-            return { message: "لقد أتممت هذا الدرس سابقاً، لن يتم إضافة XP جديد" };
+            return { message: "You have already completed this lesson, no new XP to award" };
         }
     } catch (error) {
         await connection.rollback();
@@ -819,13 +819,17 @@ const finishLessonAndAwardXP = async (studentId, courseId, chapterId, lessonId, 
     }
 };
 
-const getAllAvailableCourses = async () => {
-    // يمكن إضافة منطق إضافي هنا (مثل استثناء الكورسات التي سجل فيها الطالب بالفعل)
-    return await courseRepository.findAvailableCourses();
+// في ملف courseService.js
+const getAvailableCourses = async (studentId) => {
+    return await courseRepository.findAvailableCourses(studentId);
 };
+// داخل courseService.js
 const getStudentDashboard = async (studentId) => {
-    // يمكن هنا مستقبلاً إضافة منطق لجلب "آخر درس شاهده الطالب"
-    return await courseRepository.findEnrolledCoursesByStudent(studentId);
+    // جلب الكورسات المسجل فيها الطالب مع تقدمه
+    const enrolledCourses = await courseRepository.findEnrolledCoursesByStudent(studentId);
+    
+    // يمكنك هنا إضافة أي منطق إضافي إذا أردت، مثل معالجة الصور
+    return enrolledCourses;
 };
 // ============================================================
 // Exports
@@ -859,7 +863,7 @@ module.exports = {
     getLessonContent,
     getFormattedContents,
     finishLessonAndAwardXP,
-    getAllAvailableCourses ,
+    getAvailableCourses,
     getStudentDashboard
 
 };
