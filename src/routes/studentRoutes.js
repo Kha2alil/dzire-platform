@@ -13,5 +13,10 @@ router.get(
     roleMiddleware('teacher'),
     studentController.searchStudents
 );
-
+//GET  /api/students/enroll
+router.post('/enroll',
+    authMiddleware,
+    roleMiddleware('student'),
+    studentController.enroll
+);
 module.exports = router;

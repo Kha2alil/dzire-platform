@@ -6,11 +6,20 @@ const db = require('../config/database');
 
 const createCourse = async (courseData) => {
     const { teacher_id, title, description, subdomain_id, difficulty_level } = courseData;
+
     const query = `
         INSERT INTO courses (teacher_id, title, description, subdomain_id, difficulty_level)
         VALUES (?, ?, ?, ?, ?)
     `;
-    const [result] = await db.query(query, [teacher_id, title, description, subdomain_id, difficulty_level]);
+
+    const [result] = await db.query(query, [
+        teacher_id,
+        title,
+        description || null,
+        subdomain_id,
+        difficulty_level
+    ]);
+
     return findCourseById(result.insertId);
 };
 
@@ -145,38 +154,38 @@ const updateLessonContent = async (id, contentData) => {
 
     const fields = [];
     const values = [];
-    
-    if (contentData.video_url !== undefined) { 
-        fields.push('video_url = ?'); 
-        values.push(contentData.video_url); 
+
+    if (contentData.video_url !== undefined) {
+        fields.push('video_url = ?');
+        values.push(contentData.video_url);
     }
-    if (contentData.pdf_url !== undefined) { 
-        fields.push('pdf_url = ?'); 
-        values.push(contentData.pdf_url); 
+    if (contentData.pdf_url !== undefined) {
+        fields.push('pdf_url = ?');
+        values.push(contentData.pdf_url);
     }
-    if (contentData.summary_text !== undefined) { 
-        fields.push('summary_text = ?'); 
-        values.push(contentData.summary_text); 
+    if (contentData.summary_text !== undefined) {
+        fields.push('summary_text = ?');
+        values.push(contentData.summary_text);
     }
-    
+
     if (fields.length === 0) {
         console.log("❌ No fields to update!");
         return false;
     }
-    
+
     // لنجرب البحث بالـ ID كنص أولاً (كما يفعل UUID عادة)
     const query = `UPDATE lessons SET ${fields.join(', ')} WHERE id = ? OR id = UUID_TO_BIN(?)`;
     values.push(id);
     values.push(id);
-    
+
     console.log("📜 SQL Query:", query);
     console.log("🔢 SQL Values:", values);
 
     const [result] = await db.query(query, values);
-    
+
     console.log("📊 DB Update Result:", result);
     console.log("🚀 === DEBUG END ===");
-    
+
     return result.affectedRows > 0;
 };
 
@@ -219,14 +228,14 @@ const deleteLesson = async (id) => {
 const createAssessment = async (chapterId, assessmentData, courseId) => {
     // 💡 التعديل هنا: استخراج passing_score من البيانات
     const { title, type, passing_score, questions } = assessmentData;
-    
+
     // 1. إنشاء الاختبار الأساسي (أضفنا passing_score إلى الاستعلام)
     const finalScore = passing_score || 50; // إذا لم يرسل المعلم قيمة، نضع 50 كافتراضي
     await db.query(
-        `INSERT INTO assessments (course_id, chapter_id, title, type, passing_score) VALUES (?, ?, ?, ?, ?)`, 
+        `INSERT INTO assessments (course_id, chapter_id, title, type, passing_score) VALUES (?, ?, ?, ?, ?)`,
         [courseId, chapterId, title, type, finalScore]
     );
-    
+
     const [assRows] = await db.query('SELECT id FROM assessments WHERE chapter_id = ? AND title = ? ORDER BY id DESC LIMIT 1', [chapterId, title]);
     const assessmentId = assRows[0].id;
 
@@ -242,14 +251,14 @@ const createAssessment = async (chapterId, assessmentData, courseId) => {
 const findAssessmentById = async (id) => {
     const [assRows] = await db.query('SELECT * FROM assessments WHERE id = ?', [id]);
     if (!assRows[0]) return null;
-    
+
     // جلب الأسئلة وتحويل الـ JSON إلى مصفوفة ليفهمها الـ Frontend
     const [questions] = await db.query(`SELECT * FROM questions WHERE assessment_id = ? ORDER BY order_index ASC`, [id]);
     const parsedQuestions = questions.map(q => ({
-        ...q, 
+        ...q,
         options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options
     }));
-    
+
     return { ...assRows[0], questions: parsedQuestions };
 };
 
@@ -286,8 +295,8 @@ async function updateAssessment(assessmentId, data) {
             await db.query(
                 "INSERT INTO questions (assessment_id, question_text, options, correct_answer) VALUES (?, ?, ?, ?)",
                 [
-                    assessmentId, 
-                    q.question_text, 
+                    assessmentId,
+                    q.question_text,
                     JSON.stringify(q.options), // تأكد من تحويل المصفوفة لنص JSON
                     q.correct_answer
                 ]
@@ -313,16 +322,16 @@ const addQuestion = async (assessmentId, q) => {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const values = [
-        assessmentId, 
-        q.question_text, 
+        assessmentId,
+        q.question_text,
         JSON.stringify(q.options), // تحويل الخيارات لـ JSON
-        q.correct_answer, 
-        q.socratic_hint || null, 
-        q.difficulty_level || 'medium', 
-        q.points || 1, 
+        q.correct_answer,
+        q.socratic_hint || null,
+        q.difficulty_level || 'medium',
+        q.points || 1,
         q.order_index || 0
     ];
-    
+
     await db.query(query, values);
     return findAssessmentById(assessmentId); // نعيد الاختبار كاملاً لتحديث الواجهة
 };
@@ -330,7 +339,7 @@ const addQuestion = async (assessmentId, q) => {
 const updateQuestion = async (questionId, updateData) => {
     const fields = []; const values = [];
     const keys = ['question_text', 'options', 'correct_answer', 'socratic_hint', 'difficulty_level', 'points', 'order_index'];
-    
+
     keys.forEach(k => {
         if (updateData[k] !== undefined) {
             fields.push(`${k} = ?`);
@@ -338,11 +347,11 @@ const updateQuestion = async (questionId, updateData) => {
             values.push(k === 'options' ? JSON.stringify(updateData[k]) : updateData[k]);
         }
     });
-    
+
     if (fields.length === 0) return null;
     values.push(questionId);
     await db.query(`UPDATE questions SET ${fields.join(', ')} WHERE id = ?`, values);
-    
+
     return findQuestionById(questionId);
 };
 
@@ -354,14 +363,14 @@ const deleteQuestion = async (id) => {
 const findQuestionById = async (id) => {
     const [rows] = await db.query('SELECT * FROM questions WHERE id = ?', [id]);
     if (!rows[0]) return null;
-    
+
     const q = rows[0];
     return { ...q, options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options };
 };
 
 const findQuestionsByAssessmentId = async (assessmentId) => {
     const [rows] = await db.query(
-        "SELECT * FROM questions WHERE assessment_id = ? ORDER BY id ASC", 
+        "SELECT * FROM questions WHERE assessment_id = ? ORDER BY id ASC",
         [assessmentId]
     );
     return rows;
@@ -376,11 +385,182 @@ const searchCourses = async (teacherId, filters) => {
     const [rows] = await db.query(query, values);
     return rows;
 };
+// 1. جلب كل فصول كورس معين مرتبة حسب order_index
+const getAllChapters = async (courseId) => {
+    const query = `SELECT * FROM chapters WHERE course_id = ? ORDER BY order_index ASC`;
+    const [rows] = await db.query(query, [courseId]);
+    return rows;
+};
+// src/repositories/courseRepository.js
+const getAssessmentResult = async (studentId, chapterId) => {
+    // قمت بإزالة sa.created_at واستبدالها بـ sa.id للترتيب أو تركها بدون ترتيب
+    const query = `
+        SELECT sa.score, a.passing_score 
+        FROM student_assessments sa
+        JOIN assessments a ON sa.assessment_id = a.id
+        WHERE sa.student_id = ? AND a.chapter_id = ?
+        ORDER BY sa.id DESC LIMIT 1`;
 
+    const [rows] = await db.query(query, [studentId, chapterId]);
+
+    if (rows.length === 0) return null;
+
+    const result = rows[0];
+
+    // نقارن السكور بالدرجة المطلوبة لنحدد الحالة برمجياً
+    return {
+        score: result.score,
+        passing_score: result.passing_score,
+        status: result.score >= result.passing_score ? 'passed' : 'failed'
+    };
+};
+// 2. جلب إجمالي دروس الكورس (لأن النسبة المئوية تعتمد على إجمالي الحصص)
+const getLessonsByChapter = async (chapterId) => {
+    const [rows] = await db.query(
+        "SELECT id, title, order_index, is_free, xp_reward FROM lessons WHERE chapter_id = ? ORDER BY order_index",
+        [chapterId]
+    );
+    return rows;
+};
+const getLessonById = async (lessonId) => {
+    const [rows] = await db.query(
+        `SELECT id, title, video_url, pdf_url, summary_text, 
+                content_type, content_url, order_index, xp_reward 
+         FROM lessons WHERE id = ?`,
+        [lessonId]
+    );
+    return rows[0];
+};
+// 3. جلب عدد الحصص الموجودة في الفصول التي تسبق الفصل الحالي
+const getTotalCourseLessons = async (courseId) => {
+    const [rows] = await db.query(
+        "SELECT COUNT(*) as total FROM lessons WHERE course_id = ?",
+        [courseId]
+    );
+    return rows[0].total || 0;
+};
+
+const getEnrollmentData = async (studentId, courseId) => {
+    const [rows] = await db.query(
+        "SELECT progress_percentage FROM enrollments WHERE student_id = ? AND course_id = ?",
+        [studentId, courseId]
+    );
+    return rows[0];
+};
+
+const getRawContentsByLesson = async (courseId, chapterId, lessonId) => {
+    const query = `
+        SELECT c.*, l.order_index, l.xp_reward 
+        FROM contents c
+        JOIN lessons l ON c.lesson_id = l.id
+        WHERE c.lesson_id = ? AND l.chapter_id = ? AND l.course_id = ?
+    `;
+    const [rows] = await db.query(query, [lessonId, chapterId, courseId]);
+    return rows;
+};
+
+const updateStudentXP = async (executor, studentId, xpAmount) => {
+    const query = `
+        UPDATE gamification_stats 
+        SET total_xp = total_xp + ?, updated_at = NOW() 
+        WHERE student_id = ?`;
+    await executor.query(query, [xpAmount, studentId]);
+};
+// ب. تحديث نسبة التقدم في جدول enrollments
+const updateEnrollmentProgress = async (executor, studentId, courseId, lessonOrderIndex) => {
+    // 1. حساب عدد الدروس الكلي للحفاظ على دقة النسبة المئوية
+    const [rows] = await executor.query(
+        "SELECT COUNT(*) as total FROM lessons WHERE course_id = ?",
+        [courseId]
+    );
+    const totalLessons = rows[0].total || 1;
+    const progressStep = 100 / totalLessons;
+
+    // 2. التحديث الجوهري:
+    // نحدث النسبة المئوية و "آخر درس مكتمل" بشرط أن يكون الدرس الحالي أبعد مما وصل إليه الطالب سابقاً
+    const updateQuery = `
+        UPDATE enrollments 
+        SET 
+            progress_percentage = LEAST((? * ?), 100),
+            last_completed_order = ?
+        WHERE student_id = ? 
+          AND course_id = ? 
+          AND last_completed_order < ?`;
+    // الشرط الأخير هو السر: لا تلمس قاعدة البيانات إذا كان الدرس قديماً
+
+    const [result] = await executor.query(updateQuery, [
+        lessonOrderIndex, progressStep, // لحساب النسبة بناءً على الترتيب الحالي
+        lessonOrderIndex,               // لتحديث آخر درس مكتمل
+        studentId,
+        courseId,
+        lessonOrderIndex                // المقارنة مع الترتيب الحالي
+    ]);
+
+    return result.affectedRows > 0;
+};
+
+const checkLessonBelongsToChapter = async (lessonId, chapterId) => {
+    const query = `SELECT id FROM lessons WHERE id = ? AND chapter_id = ?`;
+    const [rows] = await db.query(query, [lessonId, chapterId]);
+    return rows.length > 0;
+};
+
+
+// إضافة هذه الدوال في ملف courseRepository.js
+
+// 1. جلب الكورسات المتاحة (المنشورة فقط)
+const findAvailableCourses = async (studentId) => {
+    const query = `
+        SELECT 
+            c.id, 
+            c.title, 
+            c.description, 
+            c.thumbnail_url, 
+            c.difficulty_level,
+            u.full_name AS teacher_name,
+            s.name AS subdomain_name
+        FROM courses c
+        -- تغيير إلى LEFT JOIN لضمان ظهور الكورس حتى لو حدث خلل في حساب المدرس
+        LEFT JOIN users u ON c.teacher_id = u.id
+        -- ربط المجال الفرعي
+        JOIN subdomains s ON c.subdomain_id = s.id
+        -- الربط الجوهري مع التقييم
+        JOIN placement_results pr ON c.subdomain_id = pr.subdomain_id
+        WHERE c.is_published = 1
+          AND pr.student_id = ? 
+          -- استخدام LOWER و TRIM لتجنب مشاكل حالة الأحرف والمسافات الزائدة
+          AND LOWER(TRIM(c.difficulty_level)) = LOWER(TRIM(pr.level))
+        ORDER BY c.created_at DESC
+    `;
+
+    const [rows] = await db.query(query, [studentId]);
+    return rows;
+};
+// 2. جلب الكورسات التي سجل فيها طالب معين
+const findEnrolledCoursesByStudent = async (studentId) => {
+    const query = `
+        SELECT 
+            c.id, c.title, c.thumbnail_url, 
+            e.progress_percentage, 
+            e.last_completed_order, -- إضافة الحقل هنا
+            e.status, e.enrolled_at,
+            u.full_name as teacher_name
+        FROM courses c
+        JOIN enrollments e ON c.id = e.course_id
+        JOIN users u ON c.teacher_id = u.id
+        WHERE e.student_id = ?
+    `;
+    const [rows] = await db.query(query, [studentId]);
+    return rows;
+};
+
+// لا تنسَ إضافتهم في module.exports في نهاية الملف
 module.exports = {
     createCourse, findCourseById, findCoursesByTeacher, updateCourse, updateCourseThumbnail, deleteCourse,
     createChapter, findChaptersByCourse, findChapterById, updateChapter, deleteChapter,
     createLesson, updateLesson, updateLessonContent, findLessonsByChapter, findLessonById, deleteLesson,
     createAssessment, findAssessmentById, findAssessmentsByChapter, updateAssessment, deleteAssessment,
-    updateQuestion, addQuestion, deleteQuestion, findQuestionById, searchCourses, findQuestionsByAssessmentId
+    updateQuestion, addQuestion, deleteQuestion, findQuestionById, searchCourses, findQuestionsByAssessmentId,
+    getAllChapters, getAssessmentResult, getLessonsByChapter, getLessonById, getTotalCourseLessons,
+    getEnrollmentData, getRawContentsByLesson, updateStudentXP, updateEnrollmentProgress, checkLessonBelongsToChapter, findAvailableCourses, findEnrolledCoursesByStudent
 };

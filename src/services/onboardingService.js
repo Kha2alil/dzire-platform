@@ -4,9 +4,10 @@ const LEVEL_THRESHOLDS = {
   pro:          0.70,
   intermediate: 0.40,
 };
-
 const QUESTIONS_PER_TEST = 10;
+const VALID_LEVELS       = ['beginner', 'intermediate', 'pro'];
 
+/* ── helpers ── */
 function assignLevel(scorePercent) {
   if (scorePercent >= LEVEL_THRESHOLDS.pro)          return 'pro';
   if (scorePercent >= LEVEL_THRESHOLDS.intermediate) return 'intermediate';
@@ -15,30 +16,34 @@ function assignLevel(scorePercent) {
 
 function gradeAnswers(answers, questions) {
   const questionMap = new Map(questions.map(q => [q.id, q]));
-  let earnedPoints = 0;
-  let totalPoints  = 0;
+  let earnedPoints  = 0;
+  let totalPoints   = 0;
 
   const perQuestion = answers.map(({ questionId, answer }) => {
     const q = questionMap.get(questionId);
     if (!q) return { questionId, correct: false, points: 0 };
 
     totalPoints += q.points;
-    const isCorrect = String(answer).trim().toLowerCase() ===
-                      String(q.correct_answer).trim().toLowerCase();
+    const isCorrect =
+      String(answer).trim().toLowerCase() ===
+      String(q.correct_answer).trim().toLowerCase();
     if (isCorrect) earnedPoints += q.points;
 
     return { questionId, correct: isCorrect, points: isCorrect ? q.points : 0 };
   });
 
+  // Count unanswered questions against the total
   for (const q of questions) {
-    const answered = answers.some(a => a.questionId === q.id);
-    if (!answered) totalPoints += q.points;
+    if (!answers.some(a => a.questionId === q.id)) totalPoints += q.points;
   }
 
   const scorePercent = totalPoints > 0 ? earnedPoints / totalPoints : 0;
   return { earnedPoints, totalPoints, scorePercent, perQuestion };
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   SERVICE
+═══════════════════════════════════════════════════════════════ */
 const OnboardingService = {
 
   async getOnboardingStatus(studentId) {
@@ -51,7 +56,7 @@ const OnboardingService = {
 
   async getSubdomains(domainId) {
     const subdomains = await OnboardingRepository.getSubdomainsByDomain(domainId);
-    if (!subdomains.length) {
+    if (domainId && !subdomains.length) {
       const err = new Error('Domain not found or has no subdomains.');
       err.statusCode = 404;
       throw err;
@@ -67,9 +72,13 @@ const OnboardingService = {
       throw err;
     }
 
-    const questions = await OnboardingRepository.getQuestions(subdomainId, level, QUESTIONS_PER_TEST);
+    const questions = await OnboardingRepository.getQuestions(
+      subdomainId, level, QUESTIONS_PER_TEST
+    );
     if (!questions.length) {
-      const err = new Error(`No placement questions available for this subdomain at level "${level}".`);
+      const err = new Error(
+        `No placement questions available for this subdomain at level "${level}".`
+      );
       err.statusCode = 404;
       throw err;
     }
@@ -115,10 +124,27 @@ const OnboardingService = {
       score: parseFloat((scorePercent * 100).toFixed(2)),
     });
 
-    return { earnedPoints, totalPoints, scorePercent: parseFloat((scorePercent * 100).toFixed(2)), assignedLevel, perQuestion };
+    return {
+      earnedPoints,
+      totalPoints,
+      scorePercent:   parseFloat((scorePercent * 100).toFixed(2)),
+      assignedLevel,
+      perQuestion,
+    };
   },
 
-  async skipToLevel({ studentId, subdomainId, domainId }) {
+  /**
+   * Skip the placement test and record the student's self-assessed level.
+   *
+   * @param {string} studentId
+   * @param {string} subdomainId
+   * @param {string} domainId
+   * @param {string} [level='beginner'] – The level chosen by the student on the
+   *   onboarding form.  Defaults to 'beginner' if not supplied so that existing
+   *   callers that don't pass a level still work.
+   */
+  async skipToLevel({ studentId, subdomainId, domainId, level }) {
+    // Guard: don't overwrite an existing result
     const existing = await OnboardingRepository.getPlacementResult(studentId);
     if (existing) {
       const err = new Error('Onboarding already completed.');
@@ -133,15 +159,20 @@ const OnboardingService = {
       throw err;
     }
 
+    // Sanitise level — fall back to 'beginner' when missing or invalid
+    const safeLevel = level && VALID_LEVELS.includes(String(level).trim())
+      ? String(level).trim()
+      : 'beginner';
+
     await OnboardingRepository.savePlacementResult({
       studentId,
       subdomainId,
       domainId,
-      level: 'beginner',
+      level: safeLevel,
       score: 0,
     });
 
-    return { assignedLevel: 'beginner', skipped: true };
+    return { assignedLevel: safeLevel, skipped: true };
   },
 };
 
