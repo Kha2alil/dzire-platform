@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { get } = require('../routes/courseRoutes');
 
 // ============================================================
 // COURSES
@@ -554,6 +555,40 @@ const findEnrolledCoursesByStudent = async (studentId) => {
     return rows;
 };
 
+const getTeacherStudentCount = async (teacherId) => {
+    const query = `
+        SELECT COUNT(DISTINCT e.student_id) AS total_students
+        FROM enrollments e
+        JOIN courses c ON e.course_id = c.id
+        WHERE c.teacher_id = ?
+    `;
+    const [rows] = await db.query(query, [teacherId]);
+    return rows[0].total_students;
+};
+
+
+const getStudentProgressInCourses = async (teacherId) => {
+    const query = `
+        SELECT 
+            u.full_name AS Student,
+            c.title AS Course,
+            e.progress_percentage AS Progress, 
+            gs.total_xp AS XP,
+            gs.current_level AS Level,
+            gs.updated_at AS Last_Active,
+            e.status AS Status
+        FROM enrollments e
+        JOIN courses c ON e.course_id = c.id
+        JOIN users u ON e.student_id = u.id
+        -- جلب بيانات الجيمنج الخاصة بكل طالب
+        LEFT JOIN gamification_stats gs ON e.student_id = gs.student_id
+        -- الفلترة بمعرف الأستاذ وليس الطالب
+        WHERE c.teacher_id = ?
+        ORDER BY gs.updated_at DESC
+    `;
+    const [rows] = await db.query(query, [teacherId]);
+    return rows;
+};
 // لا تنسَ إضافتهم في module.exports في نهاية الملف
 module.exports = {
     createCourse, findCourseById, findCoursesByTeacher, updateCourse, updateCourseThumbnail, deleteCourse,
@@ -562,5 +597,6 @@ module.exports = {
     createAssessment, findAssessmentById, findAssessmentsByChapter, updateAssessment, deleteAssessment,
     updateQuestion, addQuestion, deleteQuestion, findQuestionById, searchCourses, findQuestionsByAssessmentId,
     getAllChapters, getAssessmentResult, getLessonsByChapter, getLessonById, getTotalCourseLessons,
-    getEnrollmentData, getRawContentsByLesson, updateStudentXP, updateEnrollmentProgress, checkLessonBelongsToChapter, findAvailableCourses, findEnrolledCoursesByStudent
+    getEnrollmentData, getRawContentsByLesson, updateStudentXP, updateEnrollmentProgress, checkLessonBelongsToChapter, findAvailableCourses, findEnrolledCoursesByStudent , 
+    getTeacherStudentCount , getStudentProgressInCourses
 };

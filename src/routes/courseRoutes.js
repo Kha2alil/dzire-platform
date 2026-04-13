@@ -1,9 +1,9 @@
 const express = require('express');
-const router  = express.Router();
+const router = express.Router();
 
 const courseController = require('../controllers/courseController');
-const authMiddleware   = require('../middlewares/authMiddleware');
-const roleMiddleware   = require('../middlewares/roleMiddleware');
+const authMiddleware = require('../middlewares/authMiddleware');
+const roleMiddleware = require('../middlewares/roleMiddleware');
 const { uploadThumbnail, uploadLessonContent, handleUploadError } = require('../middlewares/uploadMiddleware');
 
 // ============================================================
@@ -28,6 +28,13 @@ router.use(authMiddleware);
 
 // جلب كورسات المتاحة للجميع (المنشورة فقط)
 
+router.get('/my-progress', roleMiddleware('teacher'), courseController.getTeacherDashboard);
+router.get(
+    '/student-count',
+    roleMiddleware('teacher'),
+    courseController.getMyStudentCount
+);
+
 router.get('/available', authMiddleware, roleMiddleware('student'), courseController.getAvailableCourses);
 router.get('/enrolled', authMiddleware, roleMiddleware('student'), courseController.getMyCourses);
 
@@ -37,12 +44,12 @@ router.get(
     courseController.searchCourses
 );
 
-router.post(  '/',          roleMiddleware('teacher'), courseController.createCourse);
-router.get(   '/',          roleMiddleware('teacher'), courseController.getTeacherCourses);
-router.get(   '/:courseId', roleMiddleware('teacher'), courseController.getCourseDetails);
-router.patch( '/:courseId', roleMiddleware('teacher'), courseController.updateCourse);
-router.patch('/:courseId/publish',roleMiddleware('teacher'),courseController.togglePublishStatus);
-router.delete( '/:courseId', roleMiddleware('teacher'), courseController.deleteCourse);
+router.post('/', roleMiddleware('teacher'), courseController.createCourse);
+router.get('/', roleMiddleware('teacher'), courseController.getTeacherCourses);
+router.get('/:courseId', roleMiddleware('teacher'), courseController.getCourseDetails);
+router.patch('/:courseId', roleMiddleware('teacher'), courseController.updateCourse);
+router.patch('/:courseId/publish', roleMiddleware('teacher'), courseController.togglePublishStatus);
+router.delete('/:courseId', roleMiddleware('teacher'), courseController.deleteCourse);
 
 router.post(
     '/:courseId/thumbnail',
@@ -59,8 +66,8 @@ router.post(
 // POST   /api/courses/:courseId/chapters/:chapterId → إضافة Chapter / Add chapter
 // DELETE /api/courses/:courseId/chapters/:chapterId → حذف Chapter / Delete chapter
 
-router.post(   '/:courseId/chapters',             roleMiddleware('teacher'), courseController.createChapter);
-router.delete( '/:courseId/chapters/:chapterId',  roleMiddleware('teacher'), courseController.deleteChapter);
+router.post('/:courseId/chapters', roleMiddleware('teacher'), courseController.createChapter);
+router.delete('/:courseId/chapters/:chapterId', roleMiddleware('teacher'), courseController.deleteChapter);
 
 // ============================================================
 // LESSONS — إدارة الدروس
