@@ -58,4 +58,25 @@ const findEnrollment = async (studentId, courseId) => {
     return rows[0];
 };
 
-module.exports = { searchStudents , enrollStudent, findEnrollment };
+const getLeaderboard = async (limit = 10) => {
+    const query = `
+        SELECT 
+            u.id, 
+            u.full_name AS Name, 
+            gs.total_xp AS XP, 
+            p.avatar_url AS Image,
+            p.specialization AS Specialization
+        FROM users u
+        INNER JOIN gamification_stats gs ON u.id = gs.student_id
+        LEFT JOIN profiles p ON u.id = p.user_id
+        WHERE u.role = 'student' 
+        ORDER BY gs.total_xp DESC 
+        LIMIT ?
+    `;
+    const [rows] = await db.query(query, [limit]);
+    return rows;
+};
+
+// تأكد من إضافة getLeaderboard لـ module.exports
+
+module.exports = { searchStudents , enrollStudent, findEnrollment , getLeaderboard};

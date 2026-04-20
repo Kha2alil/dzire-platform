@@ -20,6 +20,9 @@ const onboardingRoutes = require('./src/routes/onboardingRoutes');
 const authMiddleware = require('./src/middlewares/authMiddleware');
 const OnboardingController = require('./src/controllers/onboardingController');
 
+
+const adminRoutes = require('./src/routes/adminRoutes');
+
 // Load environment variables from .env file
 // تحميل متغيرات البيئة من ملف .env
 dotenv.config();
@@ -55,6 +58,7 @@ app.use('/api/gamification',  gamificationRoutes);
 app.use('/api/courses',       courseRoutes);
 app.use('/api/students',      studentRoutes);
 app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/admin', adminRoutes);
 app.get('/api/subdomains', authMiddleware, OnboardingController.getSubdomains);
 
 // Error Handler — must always be last
