@@ -49,5 +49,18 @@ const enroll = async (req, res, next) => {
         next(error);
     }
 };
+const getLeaderboardData = async (req, res, next) => {
+    try {
+        const leaderboard = await studentService.fetchLeaderboard();
+        
+        res.status(200).json({
+            success: true,
+            data: leaderboard
+        });
+    } catch (error) {
+        console.error("Error in Student Leaderboard:", error.message);
+        next(error);
+    }
+};
  
-module.exports = { searchStudents , enroll };
+module.exports = { searchStudents , enroll , getLeaderboardData };

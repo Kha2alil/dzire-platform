@@ -17,7 +17,7 @@ const signupSchema = Joi.object({
         .required(),
 
     role: Joi.string()
-        .valid('student', 'teacher') // only these two values
+        .valid('student', 'teacher', 'admin') // only these three values
         .required()
 });
 

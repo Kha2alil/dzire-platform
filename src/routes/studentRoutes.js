@@ -19,4 +19,5 @@ router.post('/enroll',
     roleMiddleware('student'),
     studentController.enroll
 );
+router.get('/leaderboard', authMiddleware ,roleMiddleware('student') , studentController.getLeaderboardData);
 module.exports = router;
