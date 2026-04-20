@@ -9,6 +9,7 @@ const {
     validateCreateAssessment
 } = require('../validators/courseValidator');
 const fs = require('fs');
+const { get } = require('http');
 
 // ============================================================
 // COURSES
@@ -34,7 +35,8 @@ const createCourse = async (teacherUser, courseData) => {
     // ✅ teacher_id + all validated fields including default_xp_reward
     const course = await courseRepository.createCourse({
         ...value,
-        teacher_id: teacherUser.id
+        teacher_id: teacherUser.id,
+        thumbnail_url: value.thumbnail_url || null  
     });
 
     return course;
@@ -827,6 +829,43 @@ const getStudentDashboard = async (studentId) => {
     // يمكنك هنا إضافة أي منطق إضافي إذا أردت، مثل معالجة الصور
     return enrolledCourses;
 };
+
+
+
+const getTeacherStats = async (teacherId) => {
+    const studentCount = await courseRepository.getTeacherStudentCount(teacherId);
+    return {
+        teacherId,
+        totalStudents: studentCount
+    };
+};
+
+const getStudentsStatsForTeacher = async (teacherId) => {
+    // 1. جلب البيانات الخام من الـ Repository
+    const rawData = await courseRepository.getStudentProgressInCourses(teacherId);
+
+    // 2. معالجة البيانات (Data Transformation)
+    const formattedData = rawData.map(record => {
+        return {
+            studentName: record.Student,
+            courseTitle: record.Course,
+            // التأكد من وجود قيمة للتقدم وتحويلها لنص منسق
+            progress: `${record.Progress || 0}%`,
+            // إذا لم يكن للطالب نقاط XP نضع 0
+            xp: record.XP || 0,
+            // إذا لم يتحدد مستوى الطالب في نظام الجيمنج نضع 'N/A'
+            level: record.Level || 'N/A',
+            // تنسيق تاريخ آخر نشاط ليكون مقروءاً
+            lastActive: record.Last_Active 
+                ? new Date(record.Last_Active).toLocaleString('en-GB') 
+                : 'No activity yet',
+            // تحديد الحالة مع جعل أول حرف كبير
+            status: record.Status ? record.Status.charAt(0).toUpperCase() + record.Status.slice(1) : 'Unknown'
+        };
+    });
+
+    return formattedData;
+};
 // ============================================================
 // Exports
 // ============================================================
@@ -860,6 +899,8 @@ module.exports = {
     getFormattedContents,
     finishLessonAndAwardXP,
     getAvailableCourses,
-    getStudentDashboard
+    getStudentDashboard,
+    getTeacherStats ,
+    getStudentsStatsForTeacher
 
 };

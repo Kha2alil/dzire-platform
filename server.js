@@ -10,6 +10,7 @@ const profileRoutes     = require('./src/routes/profileRoutes');
 const gamificationRoutes = require('./src/routes/gamificationRoutes');
 const errorHandler      = require('./src/middlewares/errorHandler');
 
+
 // Courses & Students (feature/courses)
 const courseRoutes  = require('./src/routes/courseRoutes');
 const studentRoutes = require('./src/routes/studentRoutes');
@@ -27,6 +28,9 @@ dotenv.config();
 // Create Express app
 // إنشاء تطبيق Express
 const app = express();
+
+const notificationRoutes = require('./src/routes/notificationRoutes');
+app.use('/api/notifications', notificationRoutes);
 
 // Allow Frontend to communicate with Backend
 // السماح للـ Frontend بالتواصل مع الـ Backend
@@ -60,6 +64,7 @@ app.get('/api/subdomains', authMiddleware, OnboardingController.getSubdomains);
 // Error Handler — must always be last
 // ربط الـ Error Handler - يجب أن يكون آخر شيء دائماً
 app.use(errorHandler);
+
 
 // Start the server
 // تشغيل السيرفر

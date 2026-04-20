@@ -634,6 +634,44 @@ const getMyCourses = async (req, res) => {
     }
 };
 
+
+const getMyStudentCount = async (req, res) => {
+    try {
+        // نأخذ معرف المدرس من التوكن (req.user.id)
+        const teacherId = req.user.id;
+
+        const stats = await courseService.getTeacherStats(teacherId);
+
+        res.status(200).json({
+            success: true,
+            data: stats
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error fetching student count",
+            error: error.message
+        });
+    }
+};
+const getTeacherDashboard = async (req, res) => {
+    try {
+        const teacherId = req.user.id; // التأكد أن التوكن يخص الأستاذ
+        const data = await courseService.getStudentsStatsForTeacher(teacherId);
+
+        res.status(200).json({
+            success: true,
+            results: data.length,
+            data: data
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error fetching students statistics",
+            error: error.message
+        });
+    }
+};
 module.exports = {
     createCourse,
     getTeacherCourses,
@@ -664,5 +702,7 @@ module.exports = {
     getLessonDetails,
     finishLesson,
     getAvailableCourses,
-    getMyCourses
+    getMyCourses,
+    getMyStudentCount,
+    getTeacherDashboard
 };
