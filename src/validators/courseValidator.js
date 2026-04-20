@@ -33,13 +33,13 @@ const updateCourseSchema = Joi.object({
 
 const createChapterSchema = Joi.object({
     title: Joi.string().min(3).max(255).required(),
-    order_index: Joi.number().integer().min(0).required()
+    order_index: Joi.number().integer().min(0).optional()
 });
 
 const createLessonSchema = Joi.object({
     title: Joi.string().min(3).max(255).required(),
     content_type: Joi.string().valid('video', 'pdf').required(),
-    order_index: Joi.number().integer().min(0).required(),
+    order_index: Joi.number().integer().min(0).optional(),
     duration: Joi.number().integer().min(1).optional(),
     is_free: Joi.boolean().default(false),
     xp_reward: Joi.number().integer().min(0).default(0)

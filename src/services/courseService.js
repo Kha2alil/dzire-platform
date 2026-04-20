@@ -35,7 +35,8 @@ const createCourse = async (teacherUser, courseData) => {
     // ✅ teacher_id + all validated fields including default_xp_reward
     const course = await courseRepository.createCourse({
         ...value,
-        teacher_id: teacherUser.id
+        teacher_id: teacherUser.id,
+        thumbnail_url: value.thumbnail_url || null  
     });
 
     return course;
