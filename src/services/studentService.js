@@ -30,5 +30,18 @@ const enrollInCourse = async (studentId, courseId) => {
     }
     return await studentRepository.enrollStudent(studentId, courseId);
 };
+const fetchLeaderboard = async () => {
+    const students = await studentRepository.getLeaderboard(10);
+    
+    return students.map((student, index) => ({
+        rank: index + 1,
+        name: student.Name,
+        xp: student.XP || 0,
+        avatar: student.Image || 'default-avatar.png',
+        specialization: student.Specialization || 'General Student',
+        // تمييز الثلاثة الأوائل
+        medal: index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? 'bronze' : null
+    }));
+};
 
-module.exports = { searchStudents, enrollInCourse };
+module.exports = { searchStudents, enrollInCourse , fetchLeaderboard  };

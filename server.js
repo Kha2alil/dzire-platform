@@ -10,6 +10,7 @@ const profileRoutes     = require('./src/routes/profileRoutes');
 const gamificationRoutes = require('./src/routes/gamificationRoutes');
 const errorHandler      = require('./src/middlewares/errorHandler');
 
+
 // Courses & Students (feature/courses)
 const courseRoutes  = require('./src/routes/courseRoutes');
 const studentRoutes = require('./src/routes/studentRoutes');
@@ -20,6 +21,9 @@ const onboardingRoutes = require('./src/routes/onboardingRoutes');
 const authMiddleware = require('./src/middlewares/authMiddleware');
 const OnboardingController = require('./src/controllers/onboardingController');
 
+
+const adminRoutes = require('./src/routes/adminRoutes');
+
 // Load environment variables from .env file
 // تحميل متغيرات البيئة من ملف .env
 dotenv.config();
@@ -27,6 +31,9 @@ dotenv.config();
 // Create Express app
 // إنشاء تطبيق Express
 const app = express();
+
+const notificationRoutes = require('./src/routes/notificationRoutes');
+app.use('/api/notifications', notificationRoutes);
 
 // Allow Frontend to communicate with Backend
 // السماح للـ Frontend بالتواصل مع الـ Backend
@@ -55,11 +62,13 @@ app.use('/api/gamification',  gamificationRoutes);
 app.use('/api/courses',       courseRoutes);
 app.use('/api/students',      studentRoutes);
 app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/admin', adminRoutes);
 app.get('/api/subdomains', authMiddleware, OnboardingController.getSubdomains);
 
 // Error Handler — must always be last
 // ربط الـ Error Handler - يجب أن يكون آخر شيء دائماً
 app.use(errorHandler);
+
 
 // Start the server
 // تشغيل السيرفر

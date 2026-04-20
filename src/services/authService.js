@@ -31,12 +31,12 @@ const signup = async (userData) => {
     const verificationToken = generateToken({ email: value.email }, '24h');
 
     const user = await userRepository.createUser({
-        email:              value.email,
+        email: value.email,
         password_hash,
-        full_name:          value.full_name,
-        role:               value.role,
+        full_name: value.full_name,
+        role: value.role,
         verification_token: verificationToken,
-        token_expires_at:   new Date(Date.now() + 24 * 60 * 60 * 1000)
+        token_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000)
     });
 
     await profileRepository.createProfile(user.id);
@@ -45,7 +45,7 @@ const signup = async (userData) => {
 
     return {
         message: 'تم التسجيل بنجاح، تحقق من إيميلك / Signed up successfully, check your email',
-        email:   user.email
+        email: user.email
     };
 };
 
@@ -104,10 +104,18 @@ const login = async (userData) => {
     // الخطوة 2: ابحث عن المستخدم بالإيميل
     // Step 2: Find user by email
     const user = await userRepository.findByEmail(value.email);
+
+    if (user) {
+        console.log("Password Hash in DB:", user.password_hash);
+        console.log("User Status:", user.status);
+    }
     if (!user) {
         const error = new Error('الإيميل أو كلمة المرور غير صحيحة / Invalid email or password');
         error.statusCode = 401;
         throw error;
+    }
+    if (user.status === 'banned') {
+        return res.status(403).json({ message: "هذا الحساب محظور حالياً" });
     }
 
     // الخطوة 3: تحقق أن الحساب مفعّل
@@ -138,10 +146,10 @@ const login = async (userData) => {
         message: 'تم تسجيل الدخول بنجاح / Logged in successfully',
         token,
         user: {
-            id:        user.id,
+            id: user.id,
             full_name: user.full_name,
-            email:     user.email,
-            role:      user.role
+            email: user.email,
+            role: user.role
         }
     };
 };
@@ -176,7 +184,7 @@ const changePassword = async (userId, data) => {
     // ملاحظة: findById لا يجلب password_hash — نحتاج findByEmail
     // Note: findById doesn't fetch password_hash — we need findByEmail
     const fullUser = await userRepository.findByEmail(user.email);
-    const isValid  = await bcrypt.compare(value.current_password, fullUser.password_hash);
+    const isValid = await bcrypt.compare(value.current_password, fullUser.password_hash);
     if (!isValid) {
         const error = new Error('كلمة المرور الحالية غير صحيحة / Current password is incorrect');
         error.statusCode = 401;

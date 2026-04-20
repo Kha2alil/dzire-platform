@@ -6,22 +6,26 @@ const { get } = require('../routes/courseRoutes');
 // ============================================================
 
 const createCourse = async (courseData) => {
-    const { teacher_id, title, description, subdomain_id, difficulty_level } = courseData;
-
+    const { teacher_id, title, description, subdomain_id, difficulty_level, thumbnail_url } = courseData;
     const query = `
-        INSERT INTO courses (teacher_id, title, description, subdomain_id, difficulty_level)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO courses (teacher_id, title, description, subdomain_id, difficulty_level, thumbnail_url)
+        VALUES (?, ?, ?, ?, ?, ?)
     `;
-
     const [result] = await db.query(query, [
         teacher_id,
         title,
         description || null,
         subdomain_id,
-        difficulty_level
+        difficulty_level,
+        thumbnail_url || null
     ]);
-
-    return findCourseById(result.insertId);
+    
+    // Since result.insertId is not the UUID, fetch the course using teacher_id and title
+    const [rows] = await db.query(
+        'SELECT * FROM courses WHERE teacher_id = ? AND title = ? ORDER BY created_at DESC LIMIT 1',
+        [teacher_id, title]
+    );
+    return rows[0];
 };
 
 const findCourseById = async (id) => {
@@ -74,6 +78,7 @@ const updateCourse = async (id, updateData) => {
 const updateCourseThumbnail = async (id, thumbnailUrl) => {
     const query = `UPDATE courses SET thumbnail_url = ? WHERE id = ?`;
     const [result] = await db.query(query, [thumbnailUrl, id]);
+    console.log('Update result:', result); // add this
     return result.affectedRows > 0;
 };
 
@@ -88,10 +93,25 @@ const deleteCourse = async (id) => {
 
 const createChapter = async (courseId, chapterData) => {
     const { title, order_index } = chapterData;
+    
+    let finalOrder = order_index;
+    if (finalOrder === undefined || finalOrder === null) {
+        // Get the highest order_index for this course
+        const [rows] = await db.query(
+            'SELECT MAX(order_index) as maxOrder FROM chapters WHERE course_id = ?',
+            [courseId]
+        );
+        finalOrder = (rows[0].maxOrder || 0) + 1;
+    }
+    
     const query = `INSERT INTO chapters (course_id, title, order_index) VALUES (?, ?, ?)`;
-    await db.query(query, [courseId, title, order_index]);
-    const [rows] = await db.query('SELECT * FROM chapters WHERE course_id = ? AND title = ? ORDER BY created_at DESC LIMIT 1', [courseId, title]);
-    return rows[0];
+    await db.query(query, [courseId, title, finalOrder]);
+    
+    const [newRows] = await db.query(
+        'SELECT * FROM chapters WHERE course_id = ? AND title = ? ORDER BY order_index DESC LIMIT 1',
+        [courseId, title]
+    );
+    return newRows[0];
 };
 
 const findChaptersByCourse = async (courseId) => {
@@ -136,13 +156,31 @@ const deleteChapter = async (id) => {
 
 const createLesson = async (chapterId, lessonData, courseId) => {
     const { title, order_index, duration, is_free, xp_reward, summary_text } = lessonData;
+    
+    let finalOrder = order_index;
+    if (finalOrder === undefined || finalOrder === null) {
+        // Get the highest order_index for lessons in this chapter
+        const [rows] = await db.query(
+            'SELECT MAX(order_index) as maxOrder FROM lessons WHERE chapter_id = ?',
+            [chapterId]
+        );
+        finalOrder = (rows[0].maxOrder || 0) + 1;
+    }
+    
     const query = `
         INSERT INTO lessons (course_id, chapter_id, title, order_index, duration, is_free, xp_reward, summary_text)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
-    await db.query(query, [courseId, chapterId, title, order_index, duration || null, is_free || false, xp_reward || 0, summary_text || null]);
-    const [rows] = await db.query('SELECT * FROM lessons WHERE chapter_id = ? AND title = ? ORDER BY id DESC LIMIT 1', [chapterId, title]);
-    return rows[0];
+    await db.query(query, [
+        courseId, chapterId, title, finalOrder,
+        duration || null, is_free || false, xp_reward || 0, summary_text || null
+    ]);
+    
+    const [newRows] = await db.query(
+        'SELECT * FROM lessons WHERE chapter_id = ? AND title = ? ORDER BY order_index DESC LIMIT 1',
+        [chapterId, title]
+    );
+    return newRows[0];
 };
 
 /**
