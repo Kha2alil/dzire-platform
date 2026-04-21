@@ -24,6 +24,7 @@ const OnboardingController = require('./src/controllers/onboardingController');
 
 const adminRoutes = require('./src/routes/adminRoutes');
 
+const skills = require('./src/routes/skillRoutes');
 // Load environment variables from .env file
 // تحميل متغيرات البيئة من ملف .env
 dotenv.config();
@@ -35,13 +36,20 @@ const app = express();
 const notificationRoutes = require('./src/routes/notificationRoutes');
 app.use('/api/notifications', notificationRoutes);
 
-// Allow Frontend to communicate with Backend
-// السماح للـ Frontend بالتواصل مع الـ Backend
-app.use(cors());
+app.use((req, res, next) => {
+    console.log('Content-Type header:', req.headers['content-type']);
+    next();
+});
 
 // Automatically parse JSON in every request
 // تحويل الـ JSON تلقائياً في كل طلب
 app.use(express.json());
+
+// Allow Frontend to communicate with Backend
+// السماح للـ Frontend بالتواصل مع الـ Backend
+app.use(cors());
+
+
 
 // Serve uploaded files statically (registered once)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
@@ -64,6 +72,12 @@ app.use('/api/students',      studentRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/admin', adminRoutes);
 app.get('/api/subdomains', authMiddleware, OnboardingController.getSubdomains);
+app.use('/api/skills', skills);
+
+app.post('/test-json', (req, res) => {
+    console.log('Test route req.body:', req.body);
+    res.json({ received: req.body });
+});
 
 // Error Handler — must always be last
 // ربط الـ Error Handler - يجب أن يكون آخر شيء دائماً
