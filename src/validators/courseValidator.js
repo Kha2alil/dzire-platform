@@ -20,6 +20,8 @@ const createCourseSchema = Joi.object({
         .lowercase()  
         .valid('beginner', 'intermediate', 'advanced')
         .required(),
+
+    skill_id: Joi.string().uuid().optional()    
 });
 
 const updateCourseSchema = Joi.object({
@@ -28,12 +30,15 @@ const updateCourseSchema = Joi.object({
     difficulty_level: Joi.string()
         .valid('beginner', 'intermediate', 'advanced')
         .optional(),
-    is_published: Joi.boolean().optional()
+    is_published: Joi.boolean().optional(),
+    skill_id : Joi.string().uuid().optional()
+
 }).min(1);
 
 const createChapterSchema = Joi.object({
     title: Joi.string().min(3).max(255).required(),
-    order_index: Joi.number().integer().min(0).optional()
+    order_index: Joi.number().integer().min(0).optional(),
+    skill_id: Joi.string().uuid().optional()
 });
 
 const createLessonSchema = Joi.object({
@@ -49,6 +54,7 @@ const createAssessmentSchema = Joi.object({
     title: Joi.string().min(3).max(255).required(),
     type: Joi.string().valid('quiz', 'final_exam').required(),
     passing_score: Joi.number().integer().min(1).max(100).required(),
+    lesson_id: Joi.string().uuid().optional(), // ✅ إضافة هذا السطر
     questions: Joi.array().items(
         Joi.object({
             question_text: Joi.string().required(),

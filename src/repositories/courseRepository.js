@@ -6,10 +6,10 @@ const { get } = require('../routes/courseRoutes');
 // ============================================================
 
 const createCourse = async (courseData) => {
-    const { teacher_id, title, description, subdomain_id, difficulty_level, thumbnail_url } = courseData;
+    const { teacher_id, title, description, subdomain_id, difficulty_level, thumbnail_url, skill_id } = courseData;
     const query = `
-        INSERT INTO courses (teacher_id, title, description, subdomain_id, difficulty_level, thumbnail_url)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO courses (teacher_id, title, description, subdomain_id, difficulty_level, thumbnail_url, skill_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
     const [result] = await db.query(query, [
         teacher_id,
@@ -17,10 +17,11 @@ const createCourse = async (courseData) => {
         description || null,
         subdomain_id,
         difficulty_level,
-        thumbnail_url || null
+        thumbnail_url || null,
+        skill_id || null      // ✅ added
     ]);
     
-    // Since result.insertId is not the UUID, fetch the course using teacher_id and title
+    // Fetch the created course
     const [rows] = await db.query(
         'SELECT * FROM courses WHERE teacher_id = ? AND title = ? ORDER BY created_at DESC LIMIT 1',
         [teacher_id, title]
@@ -63,13 +64,16 @@ const findCoursesByTeacher = async (teacherId) => {
 const updateCourse = async (id, updateData) => {
     const fields = [];
     const values = [];
+    
     if (updateData.title !== undefined) { fields.push('title = ?'); values.push(updateData.title); }
     if (updateData.description !== undefined) { fields.push('description = ?'); values.push(updateData.description); }
     if (updateData.difficulty_level !== undefined) { fields.push('difficulty_level = ?'); values.push(updateData.difficulty_level); }
     if (updateData.is_published !== undefined) { fields.push('is_published = ?'); values.push(updateData.is_published); }
+    if (updateData.skill_id !== undefined) { fields.push('skill_id = ?'); values.push(updateData.skill_id); } // ✅ added
 
     if (fields.length === 0) return null;
     values.push(id);
+    
     const query = `UPDATE courses SET ${fields.join(', ')} WHERE id = ?`;
     await db.query(query, values);
     return findCourseById(id);
@@ -264,29 +268,59 @@ const deleteLesson = async (id) => {
 // ASSESSMENTS
 // ============================================================
 
-const createAssessment = async (chapterId, assessmentData, courseId) => {
-    // 💡 التعديل هنا: استخراج passing_score من البيانات
+// repositories/courseRepository.js
+const createAssessment = async (chapterId, assessmentData, courseId, lessonId = null) => {
     const { title, type, passing_score, questions } = assessmentData;
+    const finalScore = passing_score || 50;
 
-    // 1. إنشاء الاختبار الأساسي (أضفنا passing_score إلى الاستعلام)
-    const finalScore = passing_score || 50; // إذا لم يرسل المعلم قيمة، نضع 50 كافتراضي
-    await db.query(
-        `INSERT INTO assessments (course_id, chapter_id, title, type, passing_score) VALUES (?, ?, ?, ?, ?)`,
-        [courseId, chapterId, title, type, finalScore]
-    );
+    // ✅ بناء الاستعلام ديناميكياً بناءً على وجود lessonId
+    let query;
+    let params;
+    if (lessonId) {
+        query = `
+            INSERT INTO assessments (course_id, chapter_id, lesson_id, title, type, passing_score)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `;
+        params = [courseId, chapterId, lessonId, title, type, finalScore];
+    } else {
+        query = `
+            INSERT INTO assessments (course_id, chapter_id, title, type, passing_score)
+            VALUES (?, ?, ?, ?, ?)
+        `;
+        params = [courseId, chapterId, title, type, finalScore];
+    }
+    await db.query(query, params);
 
-    const [assRows] = await db.query('SELECT id FROM assessments WHERE chapter_id = ? AND title = ? ORDER BY id DESC LIMIT 1', [chapterId, title]);
+    // جلب الـ ID الخاص بالتقييم المُنشأ
+    let idQuery;
+    let idParams;
+    if (lessonId) {
+        idQuery = `
+            SELECT id FROM assessments
+            WHERE course_id = ? AND chapter_id = ? AND lesson_id = ? AND title = ?
+            ORDER BY id DESC LIMIT 1
+        `;
+        idParams = [courseId, chapterId, lessonId, title];
+    } else {
+        idQuery = `
+            SELECT id FROM assessments
+            WHERE course_id = ? AND chapter_id = ? AND title = ?
+            ORDER BY id DESC LIMIT 1
+        `;
+        idParams = [courseId, chapterId, title];
+    }
+    const [assRows] = await db.query(idQuery, idParams);
     const assessmentId = assRows[0].id;
 
-    // 2. إذا تم إرسال أسئلة أثناء الإنشاء، نضيفها باستخدام الدالة المخصصة لذلك
+    // إضافة الأسئلة إن وُجدت (نفس الكود القديم)
     if (questions && Array.isArray(questions) && questions.length > 0) {
         for (const q of questions) {
             await addQuestion(assessmentId, q);
         }
     }
+
     return findAssessmentById(assessmentId);
 };
-
 const findAssessmentById = async (id) => {
     const [assRows] = await db.query('SELECT * FROM assessments WHERE id = ?', [id]);
     if (!assRows[0]) return null;
@@ -318,26 +352,40 @@ const findAssessmentsByChapter = async (chapterId) => {
 
 // مثال لما يجب أن يكون عليه الكود في الباك-إند (courseService.js أو ما يشابهه)
 async function updateAssessment(assessmentId, data) {
-    // 1. تحديث بيانات الاختبار الأساسية (العنوان، النوع، درجة النجاح)
+    // 1. تحديث بيانات الاختبار الأساسية (العنوان، النوع، درجة النجاح، lesson_id)
     await db.query(
-        "UPDATE assessments SET title = ?, type = ?, passing_score = ? WHERE id = ?",
-        [data.title, data.type, data.passing_score, assessmentId]
+        `UPDATE assessments 
+         SET title = ?, type = ?, passing_score = ?, lesson_id = ?
+         WHERE id = ?`,
+        [
+            data.title,
+            data.type,
+            data.passing_score,
+            data.lesson_id || null,   // ✅ إضافة lesson_id (يمكن أن يكون null)
+            assessmentId
+        ]
     );
 
-    // 2. إدارة الأسئلة (السر هنا!)
+    // 2. إدارة الأسئلة (إذا وُجدت)
     if (data.questions && Array.isArray(data.questions)) {
-        // أسهل وأضمن طريقة: احذف كل الأسئلة القديمة لهذا الاختبار
+        // حذف كل الأسئلة القديمة لهذا الاختبار
         await db.query("DELETE FROM questions WHERE assessment_id = ?", [assessmentId]);
 
-        // ثم أعد إضافة القائمة الجديدة بالكامل (القديم المعدل + الجديد)
+        // إعادة إضافة القائمة الجديدة بالكامل
         for (const q of data.questions) {
             await db.query(
-                "INSERT INTO questions (assessment_id, question_text, options, correct_answer) VALUES (?, ?, ?, ?)",
+                `INSERT INTO questions 
+                 (assessment_id, question_text, options, correct_answer, socratic_hint, difficulty_level, points, order_index)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     assessmentId,
                     q.question_text,
-                    JSON.stringify(q.options), // تأكد من تحويل المصفوفة لنص JSON
-                    q.correct_answer
+                    JSON.stringify(q.options),
+                    q.correct_answer,
+                    q.socratic_hint || null,
+                    q.difficulty_level || 'medium',
+                    q.points || 5,
+                    q.order_index || 0
                 ]
             );
         }
@@ -566,7 +614,7 @@ const findAvailableCourses = async (studentId) => {
         -- الربط الجوهري مع التقييم
         JOIN placement_results pr ON c.subdomain_id = pr.subdomain_id
         WHERE c.is_published = 1
-          AND pr.student_id = ? 
+          AND pr.student_id = ?
           -- استخدام LOWER و TRIM لتجنب مشاكل حالة الأحرف والمسافات الزائدة
           AND LOWER(TRIM(c.difficulty_level)) = LOWER(TRIM(pr.level))
         ORDER BY c.created_at DESC
@@ -627,6 +675,43 @@ const getStudentProgressInCourses = async (teacherId) => {
     const [rows] = await db.query(query, [teacherId]);
     return rows;
 };
+
+
+const findAssessmentByIds = async (assessmentId) => {
+    const query = `
+        SELECT 
+            a.id, a.course_id, a.chapter_id, a.lesson_id,
+            a.title, a.type, a.passing_score,
+            c.title AS chapter_title,
+            l.title AS lesson_title
+        FROM assessments a
+        LEFT JOIN chapters c ON a.chapter_id = c.id
+        LEFT JOIN lessons l ON a.lesson_id = l.id
+        WHERE a.id = ?
+    `;
+    const [rows] = await db.query(query, [assessmentId]);
+    return rows[0];
+};
+
+/**
+ * جلب جميع أسئلة تقييم معين (مرتبة حسب order_index)
+ */
+const findQuestionsByAssessmentIds = async (assessmentId) => {
+    const query = `
+        SELECT 
+            id, question_text, options, correct_answer, 
+            socratic_hint, difficulty_level, points, order_index
+        FROM questions
+        WHERE assessment_id = ?
+        ORDER BY order_index ASC
+    `;
+    const [rows] = await db.query(query, [assessmentId]);
+    // تحويل حقل options من JSON (نص) إلى مصفوفة
+    return rows.map(q => ({
+        ...q,
+        options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options
+    }));
+};
 // لا تنسَ إضافتهم في module.exports في نهاية الملف
 module.exports = {
     createCourse, findCourseById, findCoursesByTeacher, updateCourse, updateCourseThumbnail, deleteCourse,
@@ -636,5 +721,5 @@ module.exports = {
     updateQuestion, addQuestion, deleteQuestion, findQuestionById, searchCourses, findQuestionsByAssessmentId,
     getAllChapters, getAssessmentResult, getLessonsByChapter, getLessonById, getTotalCourseLessons,
     getEnrollmentData, getRawContentsByLesson, updateStudentXP, updateEnrollmentProgress, checkLessonBelongsToChapter, findAvailableCourses, findEnrolledCoursesByStudent , 
-    getTeacherStudentCount , getStudentProgressInCourses
+    getTeacherStudentCount , getStudentProgressInCourses , findAssessmentByIds , findQuestionsByAssessmentIds 
 };

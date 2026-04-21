@@ -302,7 +302,7 @@ const updateAssessment = async (req, res, next) => {
             req.params.chapterId,
             req.params.assessmentId,
             req.user.id,
-            req.body
+            req.body   // يحتوي على title, type, passing_score, lesson_id, questions
         );
         res.status(200).json({
             success: true,
@@ -672,6 +672,32 @@ const getTeacherDashboard = async (req, res) => {
         });
     }
 };
+const getAssessmentById = async (req, res, next) => {
+    try {
+        const { assessmentId } = req.params;
+        const assessment = await courseService.getAssessmentWithQuestions(assessmentId);
+        res.status(200).json({
+            success: true,
+            data: assessment
+        });
+    } catch (error) {
+        console.error('Error in getAssessmentById:', error); // سيعرض تفاصيل الخطأ في الـ terminal
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+const getChapterLessons = async (req, res, next) => {
+    try {
+        const { chapterId } = req.params;
+        const lessons = await courseService.getLessonsByChapter(chapterId);
+        res.status(200).json({
+            success: true,
+            data: lessons
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     createCourse,
     getTeacherCourses,
@@ -704,5 +730,7 @@ module.exports = {
     getAvailableCourses,
     getMyCourses,
     getMyStudentCount,
-    getTeacherDashboard
+    getTeacherDashboard, 
+    getAssessmentById,
+    getChapterLessons
 };

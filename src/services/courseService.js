@@ -351,7 +351,6 @@ const deleteLesson = async (courseId, chapterId, lessonId, teacherId) => {
  * Create assessment at the end of a chapter
  */
 const createAssessment = async (courseId, chapterId, teacherId, assessmentData) => {
-
     const { valid, messages, value } = validateCreateAssessment(assessmentData);
     if (!valid) {
         const error = new Error('بيانات غير صحيحة / Invalid data');
@@ -363,7 +362,10 @@ const createAssessment = async (courseId, chapterId, teacherId, assessmentData) 
     await _verifyCourseOwnership(courseId, teacherId);
     await _verifyChapterBelongsToCourse(chapterId, courseId);
 
-    return courseRepository.createAssessment(chapterId, value, courseId); // ← أضف courseId
+    // ✅ استخراج lesson_id من البيانات (اختياري)
+    const { lesson_id } = assessmentData;
+
+    return courseRepository.createAssessment(chapterId, value, courseId, lesson_id);
 };
 
 /**
@@ -435,7 +437,6 @@ const _verifyChapterBelongsToCourse = async (chapterId, courseId) => {
  * Update assessment title and type
  */
 const updateAssessment = async (courseId, chapterId, assessmentId, teacherId, updateData) => {
-
     // الخطوة 1: تحقق من الملكية
     await _verifyCourseOwnership(courseId, teacherId);
 
@@ -447,9 +448,9 @@ const updateAssessment = async (courseId, chapterId, assessmentId, teacherId, up
         throw error;
     }
 
-    // الخطوة 3: تحقق من البيانات
-    if (!updateData.title && !updateData.type) {
-        const error = new Error('يجب إرسال حقل واحد على الأقل');
+    // الخطوة 3: تحقق من البيانات (على الأقل حقل واحد)
+    if (!updateData.title && !updateData.type && updateData.passing_score === undefined && updateData.lesson_id === undefined && !updateData.questions) {
+        const error = new Error('يجب إرسال حقل واحد على الأقل للتحديث');
         error.statusCode = 400;
         throw error;
     }
@@ -460,7 +461,7 @@ const updateAssessment = async (courseId, chapterId, assessmentId, teacherId, up
         throw error;
     }
 
-    // الخطوة 4: حدّث الاختبار
+    // الخطوة 4: حدّث الاختبار (تمرير جميع الحقول)
     return courseRepository.updateAssessment(assessmentId, updateData);
 };
 
@@ -780,18 +781,19 @@ const getFormattedContents = async (studentId, courseId, chapterId, lessonId) =>
 
 
 const finishLessonAndAwardXP = async (studentId, courseId, chapterId, lessonId, xp_reward) => {
-    // 1. جلب بيانات الدرس أولاً لمعرفة ترتيبه (order_index)
+    // 1. Fetch lesson data to get its order_index
     const lesson = await courseRepository.getLessonById(lessonId);
 
     if (!lesson) {
         console.error(`Lesson not found: ${lessonId}`);
-        throw new Error("the lesson does not exist");
+        throw new Error("The lesson does not exist");
     }
+
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
 
-        // 2. محاولة تحديث التقدم (ستنجح فقط إذا كان الدرس جديداً على الطالب)
+        // 2. Attempt to update progress (only succeeds if this lesson is new to the student)
         const isUpdated = await courseRepository.updateEnrollmentProgress(
             connection,
             studentId,
@@ -800,12 +802,22 @@ const finishLessonAndAwardXP = async (studentId, courseId, chapterId, lessonId, 
         );
 
         if (isUpdated) {
-            // 3. نزيد الـ XP فقط إذا زاد التقدم (أي أن الدرس لم يسبق إكماله)
+            // 3. Award XP only if progress increased (lesson not previously completed)
             await courseRepository.updateStudentXP(connection, studentId, xp_reward);
             await connection.commit();
+
+            // 4. After successful commit, check if course is now fully completed
+            const enrollment = await courseRepository.getEnrollmentData(studentId, courseId);
+            if (enrollment && enrollment.progress_percentage >= 100) {
+                // Course just reached 100% – trigger skill unlock (non-blocking)
+                const skillService = require('./skillService');
+                skillService.unlockSkillIfCourseCompleted(studentId, courseId)
+                    .catch(err => console.error('Skill unlock failed:', err.message));
+            }
+
             return { message: "Great! Progress updated and XP awarded" };
         } else {
-            // إذا لم يتأثر أي سطر، فهذا يعني أن الطالب أعاد درساً قديماً
+            // No rows affected – student replayed an old lesson
             await connection.rollback();
             return { message: "You have already completed this lesson, no new XP to award" };
         }
@@ -821,6 +833,8 @@ const finishLessonAndAwardXP = async (studentId, courseId, chapterId, lessonId, 
 const getAvailableCourses = async (studentId) => {
     return await courseRepository.findAvailableCourses(studentId);
 };
+
+
 // داخل courseService.js
 const getStudentDashboard = async (studentId) => {
     // جلب الكورسات المسجل فيها الطالب مع تقدمه
@@ -866,6 +880,29 @@ const getStudentsStatsForTeacher = async (teacherId) => {
 
     return formattedData;
 };
+
+const getAssessmentWithQuestions = async (assessmentId) => {
+    // 1. جلب بيانات التقييم
+    const assessment = await courseRepository.findAssessmentByIds(assessmentId);
+    if (!assessment) {
+        const error = new Error('Assessment not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    // 2. جلب الأسئلة المرتبطة
+    const questions = await courseRepository.findQuestionsByAssessmentIds(assessmentId);
+
+    // 3. إرجاع الكائن المدمج
+    return {
+        ...assessment,
+        questions
+    };
+};
+const getLessonsByChapter = async (chapterId) => {
+    return await courseRepository.findLessonsByChapter(chapterId);
+};
+
 // ============================================================
 // Exports
 // ============================================================
@@ -902,5 +939,7 @@ module.exports = {
     getStudentDashboard,
     getTeacherStats ,
     getStudentsStatsForTeacher
+    , getAssessmentWithQuestions ,
+    getLessonsByChapter
 
 };
