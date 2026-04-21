@@ -188,4 +188,19 @@ router.get('/:courseId/progress', roleMiddleware('student'), courseController.ge
 // مسار الكورسات المتاحة للجميع (Explore)
 // تأكد من استيراد roleMiddleware و authMiddleware
 
+// جلب جميع التقييمات الخاصة بكورس (للمعلم أو المدير)
+router.get(
+    '/:courseId/assessments/:assessmentId',
+    authMiddleware,
+    roleMiddleware('teacher', 'student'),
+    courseController.getAssessmentById
+);
+
+router.get(
+    '/chapters/:chapterId/lessons',
+    authMiddleware,
+    roleMiddleware('teacher'),
+    courseController.getChapterLessons
+);
+
 module.exports = router;

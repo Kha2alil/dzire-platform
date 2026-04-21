@@ -49,6 +49,7 @@ const createAssessmentSchema = Joi.object({
     title: Joi.string().min(3).max(255).required(),
     type: Joi.string().valid('quiz', 'final_exam').required(),
     passing_score: Joi.number().integer().min(1).max(100).required(),
+    lesson_id: Joi.string().uuid().optional(), // ✅ إضافة هذا السطر
     questions: Joi.array().items(
         Joi.object({
             question_text: Joi.string().required(),
