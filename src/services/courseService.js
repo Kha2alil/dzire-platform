@@ -780,18 +780,19 @@ const getFormattedContents = async (studentId, courseId, chapterId, lessonId) =>
 
 
 const finishLessonAndAwardXP = async (studentId, courseId, chapterId, lessonId, xp_reward) => {
-    // 1. جلب بيانات الدرس أولاً لمعرفة ترتيبه (order_index)
+    // 1. Fetch lesson data to get its order_index
     const lesson = await courseRepository.getLessonById(lessonId);
 
     if (!lesson) {
         console.error(`Lesson not found: ${lessonId}`);
-        throw new Error("the lesson does not exist");
+        throw new Error("The lesson does not exist");
     }
+
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
 
-        // 2. محاولة تحديث التقدم (ستنجح فقط إذا كان الدرس جديداً على الطالب)
+        // 2. Attempt to update progress (only succeeds if this lesson is new to the student)
         const isUpdated = await courseRepository.updateEnrollmentProgress(
             connection,
             studentId,
@@ -800,12 +801,22 @@ const finishLessonAndAwardXP = async (studentId, courseId, chapterId, lessonId, 
         );
 
         if (isUpdated) {
-            // 3. نزيد الـ XP فقط إذا زاد التقدم (أي أن الدرس لم يسبق إكماله)
+            // 3. Award XP only if progress increased (lesson not previously completed)
             await courseRepository.updateStudentXP(connection, studentId, xp_reward);
             await connection.commit();
+
+            // 4. After successful commit, check if course is now fully completed
+            const enrollment = await courseRepository.getEnrollmentData(studentId, courseId);
+            if (enrollment && enrollment.progress_percentage >= 100) {
+                // Course just reached 100% – trigger skill unlock (non-blocking)
+                const skillService = require('./skillService');
+                skillService.unlockSkillIfCourseCompleted(studentId, courseId)
+                    .catch(err => console.error('Skill unlock failed:', err.message));
+            }
+
             return { message: "Great! Progress updated and XP awarded" };
         } else {
-            // إذا لم يتأثر أي سطر، فهذا يعني أن الطالب أعاد درساً قديماً
+            // No rows affected – student replayed an old lesson
             await connection.rollback();
             return { message: "You have already completed this lesson, no new XP to award" };
         }

@@ -90,8 +90,6 @@ const verifyEmail = async (token) => {
  * Login user
  */
 const login = async (userData) => {
-
-    // الخطوة 1: تحقق من البيانات
     // Step 1: Validate the data
     const { valid, messages, value } = validateLogin(userData);
     if (!valid) {
@@ -101,42 +99,45 @@ const login = async (userData) => {
         throw error;
     }
 
-    // الخطوة 2: ابحث عن المستخدم بالإيميل
     // Step 2: Find user by email
     const user = await userRepository.findByEmail(value.email);
-
-    if (user) {
-        console.log("Password Hash in DB:", user.password_hash);
-        console.log("User Status:", user.status);
-    }
     if (!user) {
         const error = new Error('الإيميل أو كلمة المرور غير صحيحة / Invalid email or password');
         error.statusCode = 401;
         throw error;
     }
+
+    // Debug logs
+    console.log("--- LOGIN DEBUG ---");
+    console.log("Request password:", value.password);
+    console.log("DB password hash:", user.password_hash);
+    console.log("User status:", user.status);
+
     if (user.status === 'banned') {
-        return res.status(403).json({ message: "هذا الحساب محظور حالياً" });
+        // Note: In a service, throwing an error is better than returning res
+        const error = new Error('هذا الحساب محظور حالياً');
+        error.statusCode = 403;
+        throw error;
     }
 
-    // الخطوة 3: تحقق أن الحساب مفعّل
-    // Step 3: Check account is active
     if (user.status !== 'active') {
         const error = new Error('يرجى تفعيل حسابك أولاً / Please verify your email first');
         error.statusCode = 403;
         throw error;
     }
 
-    // الخطوة 4: تحقق من كلمة المرور
-    // Step 4: Check password is correct
+    // Step 4: Check password
     const isPasswordValid = await bcrypt.compare(value.password, user.password_hash);
+    console.log("Bcrypt compare result:", isPasswordValid);
+    console.log("--- END DEBUG ---");
+
     if (!isPasswordValid) {
         const error = new Error('الإيميل أو كلمة المرور غير صحيحة / Invalid email or password');
         error.statusCode = 401;
         throw error;
     }
 
-    // الخطوة 5: أنشئ JWT token
-    // Step 5: Generate JWT token
+    // Step 5: Generate JWT
     const token = generateToken(
         { id: user.id, email: user.email, role: user.role },
         '7d'

@@ -6,10 +6,10 @@ const { get } = require('../routes/courseRoutes');
 // ============================================================
 
 const createCourse = async (courseData) => {
-    const { teacher_id, title, description, subdomain_id, difficulty_level, thumbnail_url } = courseData;
+    const { teacher_id, title, description, subdomain_id, difficulty_level, thumbnail_url, skill_id } = courseData;
     const query = `
-        INSERT INTO courses (teacher_id, title, description, subdomain_id, difficulty_level, thumbnail_url)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO courses (teacher_id, title, description, subdomain_id, difficulty_level, thumbnail_url, skill_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
     const [result] = await db.query(query, [
         teacher_id,
@@ -17,10 +17,11 @@ const createCourse = async (courseData) => {
         description || null,
         subdomain_id,
         difficulty_level,
-        thumbnail_url || null
+        thumbnail_url || null,
+        skill_id || null      // ✅ added
     ]);
     
-    // Since result.insertId is not the UUID, fetch the course using teacher_id and title
+    // Fetch the created course
     const [rows] = await db.query(
         'SELECT * FROM courses WHERE teacher_id = ? AND title = ? ORDER BY created_at DESC LIMIT 1',
         [teacher_id, title]
@@ -63,13 +64,16 @@ const findCoursesByTeacher = async (teacherId) => {
 const updateCourse = async (id, updateData) => {
     const fields = [];
     const values = [];
+    
     if (updateData.title !== undefined) { fields.push('title = ?'); values.push(updateData.title); }
     if (updateData.description !== undefined) { fields.push('description = ?'); values.push(updateData.description); }
     if (updateData.difficulty_level !== undefined) { fields.push('difficulty_level = ?'); values.push(updateData.difficulty_level); }
     if (updateData.is_published !== undefined) { fields.push('is_published = ?'); values.push(updateData.is_published); }
+    if (updateData.skill_id !== undefined) { fields.push('skill_id = ?'); values.push(updateData.skill_id); } // ✅ added
 
     if (fields.length === 0) return null;
     values.push(id);
+    
     const query = `UPDATE courses SET ${fields.join(', ')} WHERE id = ?`;
     await db.query(query, values);
     return findCourseById(id);
