@@ -3,28 +3,21 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
 
-
 // Auth & Profile (feature/auth)
 const authRoutes        = require('./src/routes/authRoutes');
 const profileRoutes     = require('./src/routes/profileRoutes');
 const gamificationRoutes = require('./src/routes/gamificationRoutes');
 const errorHandler      = require('./src/middlewares/errorHandler');
 
-
 // Courses & Students (feature/courses)
 const courseRoutes  = require('./src/routes/courseRoutes');
 const studentRoutes = require('./src/routes/studentRoutes');
-
-
 const onboardingRoutes = require('./src/routes/onboardingRoutes');
-
 const authMiddleware = require('./src/middlewares/authMiddleware');
 const OnboardingController = require('./src/controllers/onboardingController');
-
-
 const adminRoutes = require('./src/routes/adminRoutes');
-
 const skills = require('./src/routes/skillRoutes');
+const badgeRoutes = require('./src/routes/badgeRoutes');
 // Load environment variables from .env file
 // تحميل متغيرات البيئة من ملف .env
 dotenv.config();
@@ -36,11 +29,6 @@ const app = express();
 const notificationRoutes = require('./src/routes/notificationRoutes');
 app.use('/api/notifications', notificationRoutes);
 
-app.use((req, res, next) => {
-    console.log('Content-Type header:', req.headers['content-type']);
-    next();
-});
-
 // Automatically parse JSON in every request
 // تحويل الـ JSON تلقائياً في كل طلب
 app.use(express.json());
@@ -48,8 +36,6 @@ app.use(express.json());
 // Allow Frontend to communicate with Backend
 // السماح للـ Frontend بالتواصل مع الـ Backend
 app.use(cors());
-
-
 
 // Serve uploaded files statically (registered once)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
@@ -73,16 +59,12 @@ app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/admin', adminRoutes);
 app.get('/api/subdomains', authMiddleware, OnboardingController.getSubdomains);
 app.use('/api/skills', skills);
+app.use('/api/badges', badgeRoutes);
 
-app.post('/test-json', (req, res) => {
-    console.log('Test route req.body:', req.body);
-    res.json({ received: req.body });
-});
 
 // Error Handler — must always be last
 // ربط الـ Error Handler - يجب أن يكون آخر شيء دائماً
 app.use(errorHandler);
-
 
 // Start the server
 // تشغيل السيرفر

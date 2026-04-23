@@ -21,7 +21,7 @@ const createCourseSchema = Joi.object({
         .valid('beginner', 'intermediate', 'advanced')
         .required(),
 
-    skill_id: Joi.string().uuid().optional()    
+    skill_id: Joi.string().uuid().required()    
 });
 
 const updateCourseSchema = Joi.object({
