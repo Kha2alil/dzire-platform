@@ -315,6 +315,27 @@ const updateAssessment = async (req, res, next) => {
 };
 
 /**
+ * Submit assessment answers
+ * POST /api/courses/assessments/:assessmentId/submit
+ */
+const submitAssessment = async (req, res, next) => {
+    try {
+        const { assessmentId } = req.params;
+        const { answers } = req.body;
+        const studentId = req.user.id;
+
+        const result = await courseService.submitAssessment(studentId, assessmentId, answers);
+
+        res.status(200).json({
+            success: true,
+            ...result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
  * تعديل سؤال موجود
  * PATCH /api/courses/:courseId/assessments/:assessmentId/questions/:questionId
  */
@@ -704,5 +725,6 @@ module.exports = {
     getAvailableCourses,
     getMyCourses,
     getMyStudentCount,
-    getTeacherDashboard
+    getTeacherDashboard,
+    submitAssessment
 };

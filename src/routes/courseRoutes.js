@@ -160,6 +160,14 @@ router.patch(
     courseController.updateLesson
 );
 
+// Submit assessment answers
+router.post(
+    '/assessments/:assessmentId/submit',
+    authMiddleware,
+    roleMiddleware('student'),
+    courseController.submitAssessment
+);
+
 
 // 1. جلب قائمة الفصول لكورس معين (مع حالة القفل)
 router.get('/:courseId/chapters', roleMiddleware('student'), courseController.getChapters);

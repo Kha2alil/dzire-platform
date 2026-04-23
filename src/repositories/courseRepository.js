@@ -34,6 +34,7 @@ const findCourseById = async (id) => {
         SELECT
             c.id, c.teacher_id, c.title, c.description, c.subdomain_id,
             c.difficulty_level, c.thumbnail_url, c.is_published, c.created_at,
+            c.skill_id,                                    -- ✅ ADD THIS
             u.full_name AS teacher_name, s.name AS subdomain_name
         FROM courses c
         JOIN users u ON c.teacher_id = u.id
@@ -191,9 +192,6 @@ const createLesson = async (chapterId, lessonData, courseId) => {
  * دالة تحديث المحتوى (فيديو، PDF، نص) - نسخة التصحيح
  */
 const updateLessonContent = async (id, contentData) => {
-    console.log("🚀 === DEBUG START ===");
-    console.log("📍 Lesson ID received:", id);
-    console.log("📦 Content Data received:", contentData);
 
     const fields = [];
     const values = [];
@@ -225,9 +223,6 @@ const updateLessonContent = async (id, contentData) => {
     console.log("🔢 SQL Values:", values);
 
     const [result] = await db.query(query, values);
-
-    console.log("📊 DB Update Result:", result);
-    console.log("🚀 === DEBUG END ===");
 
     return result.affectedRows > 0;
 };

@@ -780,9 +780,7 @@ const getFormattedContents = async (studentId, courseId, chapterId, lessonId) =>
 
 
 const finishLessonAndAwardXP = async (studentId, courseId, chapterId, lessonId, xp_reward) => {
-    // 1. Fetch lesson data to get its order_index
     const lesson = await courseRepository.getLessonById(lessonId);
-
     if (!lesson) {
         console.error(`Lesson not found: ${lessonId}`);
         throw new Error("The lesson does not exist");
@@ -792,23 +790,27 @@ const finishLessonAndAwardXP = async (studentId, courseId, chapterId, lessonId, 
     try {
         await connection.beginTransaction();
 
-        // 2. Attempt to update progress (only succeeds if this lesson is new to the student)
         const isUpdated = await courseRepository.updateEnrollmentProgress(
             connection,
             studentId,
             courseId,
             lesson.order_index
-        );
+        );      
 
         if (isUpdated) {
-            // 3. Award XP only if progress increased (lesson not previously completed)
             await courseRepository.updateStudentXP(connection, studentId, xp_reward);
             await connection.commit();
 
-            // 4. After successful commit, check if course is now fully completed
+            const progressAggregator = require('./progressAggregator');
+            
+            await progressAggregator.handleLessonCompleted(studentId, courseId, lessonId, xp_reward)
+                .catch(err => console.error('Badge evaluation failed:', err.message));
+
             const enrollment = await courseRepository.getEnrollmentData(studentId, courseId);
             if (enrollment && enrollment.progress_percentage >= 100) {
-                // Course just reached 100% – trigger skill unlock (non-blocking)
+                await progressAggregator.handleCourseCompleted(studentId, courseId)
+                    .catch(err => console.error('Course completion handling failed:', err.message));
+                
                 const skillService = require('./skillService');
                 skillService.unlockSkillIfCourseCompleted(studentId, courseId)
                     .catch(err => console.error('Skill unlock failed:', err.message));
@@ -816,7 +818,6 @@ const finishLessonAndAwardXP = async (studentId, courseId, chapterId, lessonId, 
 
             return { message: "Great! Progress updated and XP awarded" };
         } else {
-            // No rows affected – student replayed an old lesson
             await connection.rollback();
             return { message: "You have already completed this lesson, no new XP to award" };
         }
@@ -877,6 +878,112 @@ const getStudentsStatsForTeacher = async (teacherId) => {
 
     return formattedData;
 };
+
+// ============================================================
+// ASSESSMENT SUBMISSION (to be moved to separate service later)
+// ============================================================
+
+/**
+ * Submit assessment answers and record result
+ */
+const submitAssessment = async (studentId, assessmentId, answers) => {
+    // 1. Get assessment details
+    const assessment = await courseRepository.findAssessmentById(assessmentId);
+    if (!assessment) {
+        const error = new Error('Assessment not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    // 2. Check if student already passed (prevent re-submission after passing)
+    const alreadyPassed = await _hasAlreadyPassedAssessment(studentId, assessmentId);
+    if (alreadyPassed) {
+        return { 
+            alreadyPassed: true, 
+            message: 'You have already passed this assessment' 
+        };
+    }
+
+    // 3. Get questions with correct answers for grading
+    const questions = await courseRepository.findQuestionsByAssessmentId(assessmentId);
+    if (!questions.length) {
+        const error = new Error('No questions found for this assessment');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    // 4. Grade submission
+    const score = _gradeSubmission(questions, answers);
+    const passingScore = assessment.passing_score || 60;
+    const passed = score >= passingScore;
+
+    // 5. Save result
+    await _saveStudentAssessment(studentId, assessmentId, score, passed);
+
+    // 6. If passed, trigger badge evaluation and skill aggregation
+    if (passed) {
+        const progressAggregator = require('./progressAggregator');
+        await progressAggregator.handleQuizPassed(studentId, assessmentId, score, passed)
+            .catch(err => console.error('Quiz badge evaluation failed:', err.message));
+    }
+
+    return {
+        success: true,
+        score,
+        passed,
+        passingScore,
+        message: passed ? 'Congratulations! You passed the assessment.' : 'You did not pass. Try again!'
+    };
+};
+
+// Helper: Check if student already passed this assessment
+const _hasAlreadyPassedAssessment = async (studentId, assessmentId) => {
+    const [rows] = await db.query(
+        `SELECT id FROM student_assessments 
+         WHERE student_id = ? AND assessment_id = ? AND passed = TRUE`,
+        [studentId, assessmentId]
+    );
+    return rows.length > 0;
+};
+
+// Helper: Save assessment result
+const _saveStudentAssessment = async (studentId, assessmentId, score, passed) => {
+    await db.query(
+        `INSERT INTO student_assessments (student_id, assessment_id, score, passed)
+         VALUES (?, ?, ?, ?)`,
+        [studentId, assessmentId, score, passed]
+    );
+};
+
+// Helper: Grade submission against correct answers
+const _gradeSubmission = (questions, studentAnswers) => {
+    let totalPoints = 0;
+    let earnedPoints = 0;
+
+    const questionMap = new Map(questions.map(q => [q.id, q]));
+
+    for (const answer of studentAnswers) {
+        const question = questionMap.get(answer.questionId);
+        if (!question) continue;
+
+        totalPoints += question.points || 1;
+        if (answer.selectedAnswer === question.correct_answer) {
+            earnedPoints += question.points || 1;
+        }
+    }
+
+    // Unanswered questions contribute to total but not earned
+    for (const q of questions) {
+        if (!studentAnswers.some(a => a.questionId === q.id)) {
+            totalPoints += q.points || 1;
+        }
+    }
+
+    const scorePercent = totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0;
+    return parseFloat(scorePercent.toFixed(2));
+};
+
+
 // ============================================================
 // Exports
 // ============================================================
@@ -911,7 +1018,8 @@ module.exports = {
     finishLessonAndAwardXP,
     getAvailableCourses,
     getStudentDashboard,
-    getTeacherStats ,
-    getStudentsStatsForTeacher
+    getTeacherStats,
+    getStudentsStatsForTeacher,
+    submitAssessment
 
 };
