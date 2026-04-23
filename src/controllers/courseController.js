@@ -4,11 +4,6 @@ const courseService = require('../services/courseService');
 // COURSES
 // ============================================================
 
-/**
- * إنشاء كورس جديد
- * Create a new course
- * POST /api/courses
- */
 const createCourse = async (req, res, next) => {
     try {
         const course = await courseService.createCourse(req.user, req.body);
@@ -22,11 +17,6 @@ const createCourse = async (req, res, next) => {
     }
 };
 
-/**
- * جلب كل كورسات الأستاذ
- * Get all teacher's courses
- * GET /api/courses
- */
 const getTeacherCourses = async (req, res, next) => {
     try {
         const courses = await courseService.getTeacherCourses(req.user.id);
@@ -39,11 +29,6 @@ const getTeacherCourses = async (req, res, next) => {
     }
 };
 
-/**
- * جلب تفاصيل كورس (مع Chapters والدروس)
- * Get course details (with Chapters and Lessons)
- * GET /api/courses/:courseId
- */
 const getCourseDetails = async (req, res, next) => {
     try {
         const course = await courseService.getCourseDetails(req.params.courseId, req.user.id);
@@ -56,11 +41,6 @@ const getCourseDetails = async (req, res, next) => {
     }
 };
 
-/**
- * تعديل الكورس
- * Update course
- * PATCH /api/courses/:courseId
- */
 const updateCourse = async (req, res, next) => {
     try {
         const course = await courseService.updateCourse(req.params.courseId, req.user.id, req.body);
@@ -74,14 +54,8 @@ const updateCourse = async (req, res, next) => {
     }
 };
 
-/**
- * تغيير حالة الكورس (نشر / مسودة)
- * Toggle course publish status
- * PATCH /api/courses/:courseId/publish
- */
 const togglePublishStatus = async (req, res, next) => {
     try {
-        // نمرر حالة النشر الجديدة (true أو false) للـ Service
         const course = await courseService.toggleCoursePublishStatus(
             req.params.courseId,
             req.user.id,
@@ -100,11 +74,6 @@ const togglePublishStatus = async (req, res, next) => {
     }
 };
 
-/**
- * رفع صورة غلاف الكورس
- * Upload course thumbnail
- * POST /api/courses/:courseId/thumbnail
- */
 const uploadThumbnail = async (req, res, next) => {
     try {
         const result = await courseService.updateCourseThumbnail(req.params.courseId, req.user.id, req.file);
@@ -118,11 +87,6 @@ const uploadThumbnail = async (req, res, next) => {
     }
 };
 
-/**
- * حذف الكورس
- * Delete course
- * DELETE /api/courses/:courseId
- */
 const deleteCourse = async (req, res, next) => {
     try {
         const result = await courseService.deleteCourse(req.params.courseId, req.user.id);
@@ -136,11 +100,6 @@ const deleteCourse = async (req, res, next) => {
 // CHAPTERS
 // ============================================================
 
-/**
- * إضافة Chapter للكورس
- * Add chapter to course
- * POST /api/courses/:courseId/chapters
- */
 const createChapter = async (req, res, next) => {
     try {
         const chapter = await courseService.createChapter(req.params.courseId, req.user.id, req.body);
@@ -154,11 +113,6 @@ const createChapter = async (req, res, next) => {
     }
 };
 
-/**
- * حذف Chapter
- * Delete chapter
- * DELETE /api/courses/:courseId/chapters/:chapterId
- */
 const deleteChapter = async (req, res, next) => {
     try {
         const result = await courseService.deleteChapter(
@@ -176,11 +130,6 @@ const deleteChapter = async (req, res, next) => {
 // LESSONS
 // ============================================================
 
-/**
- * إضافة Lesson للـ Chapter
- * Add lesson to chapter
- * POST /api/courses/:courseId/chapters/:chapterId/lessons
- */
 const createLesson = async (req, res, next) => {
     try {
         const lesson = await courseService.createLesson(
@@ -199,11 +148,6 @@ const createLesson = async (req, res, next) => {
     }
 };
 
-/**
- * رفع محتوى الدرس (فيديو أو PDF)
- * Upload lesson content (video or PDF)
- * POST /api/courses/:courseId/chapters/:chapterId/lessons/:lessonId/content
- */
 const uploadLessonContent = async (req, res, next) => {
     try {
         const result = await courseService.uploadLessonContent(
@@ -223,11 +167,6 @@ const uploadLessonContent = async (req, res, next) => {
     }
 };
 
-/**
- * حذف Lesson
- * Delete lesson
- * DELETE /api/courses/:courseId/chapters/:chapterId/lessons/:lessonId
- */
 const deleteLesson = async (req, res, next) => {
     try {
         const result = await courseService.deleteLesson(
@@ -246,11 +185,6 @@ const deleteLesson = async (req, res, next) => {
 // ASSESSMENTS
 // ============================================================
 
-/**
- * إنشاء Assessment في نهاية Chapter
- * Create assessment at end of chapter
- * POST /api/courses/:courseId/chapters/:chapterId/assessments
- */
 const createAssessment = async (req, res, next) => {
     try {
         const assessment = await courseService.createAssessment(
@@ -269,11 +203,6 @@ const createAssessment = async (req, res, next) => {
     }
 };
 
-/**
- * حذف Assessment
- * Delete assessment
- * DELETE /api/courses/:courseId/chapters/:chapterId/assessments/:assessmentId
- */
 const deleteAssessment = async (req, res, next) => {
     try {
         const result = await courseService.deleteAssessment(
@@ -287,14 +216,7 @@ const deleteAssessment = async (req, res, next) => {
         next(error);
     }
 };
-// ============================================================
-// ASSESSMENT EDIT OPERATIONS
-// ============================================================
 
-/**
- * تعديل عنوان ونوع الاختبار
- * PATCH /api/courses/:courseId/chapters/:chapterId/assessments/:assessmentId
- */
 const updateAssessment = async (req, res, next) => {
     try {
         const assessment = await courseService.updateAssessment(
@@ -302,7 +224,7 @@ const updateAssessment = async (req, res, next) => {
             req.params.chapterId,
             req.params.assessmentId,
             req.user.id,
-            req.body   // يحتوي على title, type, passing_score, lesson_id, questions
+            req.body
         );
         res.status(200).json({
             success: true,
@@ -314,10 +236,23 @@ const updateAssessment = async (req, res, next) => {
     }
 };
 
-/**
- * تعديل سؤال موجود
- * PATCH /api/courses/:courseId/assessments/:assessmentId/questions/:questionId
- */
+const submitAssessment = async (req, res, next) => {
+    try {
+        const { assessmentId } = req.params;
+        const { answers } = req.body;
+        const studentId = req.user.id;
+
+        const result = await courseService.submitAssessment(studentId, assessmentId, answers);
+
+        res.status(200).json({
+            success: true,
+            ...result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 const updateQuestion = async (req, res, next) => {
     try {
         const question = await courseService.updateQuestion(
@@ -337,10 +272,6 @@ const updateQuestion = async (req, res, next) => {
     }
 };
 
-/**
- * إضافة سؤال جديد
- * POST /api/courses/:courseId/assessments/:assessmentId/questions
- */
 const addQuestion = async (req, res, next) => {
     try {
         const assessment = await courseService.addQuestion(
@@ -359,10 +290,6 @@ const addQuestion = async (req, res, next) => {
     }
 };
 
-/**
- * حذف سؤال
- * DELETE /api/courses/:courseId/assessments/:assessmentId/questions/:questionId
- */
 const deleteQuestion = async (req, res, next) => {
     try {
         const result = await courseService.deleteQuestion(
@@ -376,10 +303,7 @@ const deleteQuestion = async (req, res, next) => {
         next(error);
     }
 };
-/**
- * تعديل بيانات الـ Chapter
- * PATCH /api/courses/:courseId/chapters/:chapterId
- */
+
 const updateChapter = async (req, res, next) => {
     try {
         const chapter = await courseService.updateChapter(
@@ -398,10 +322,6 @@ const updateChapter = async (req, res, next) => {
     }
 };
 
-/**
- * تعديل بيانات الـ Lesson
- * PATCH /api/courses/:courseId/chapters/:chapterId/lessons/:lessonId
- */
 const updateLesson = async (req, res, next) => {
     try {
         const lesson = await courseService.updateLesson(
@@ -420,15 +340,12 @@ const updateLesson = async (req, res, next) => {
         next(error);
     }
 };
-/**
- * البحث عن كورسات الأستاذ
- * GET /api/courses/search?title=python&level=beginner
- */
+
 const searchCourses = async (req, res, next) => {
     try {
         const courses = await courseService.searchCourses(
             req.user.id,
-            req.query  // title و level يأتيان من الـ URL
+            req.query
         );
         res.status(200).json({
             success: true,
@@ -439,9 +356,6 @@ const searchCourses = async (req, res, next) => {
     }
 };
 
-
-
-// جلب نسبة التقدم الحالية لعرضها في الواجهة (Dashboard/Course Page)
 const getProgress = async (req, res) => {
     try {
         const { courseId } = req.params;
@@ -449,26 +363,21 @@ const getProgress = async (req, res) => {
 
         const result = await courseService.getStudentCourseProgress(studentId, courseId);
 
-        // ✅ الربط الصحيح: استخراج القيمة وإرسالها بالمسمى الذي يفهمه الـ Frontend
         res.status(200).json({
             success: true,
-            progress: result.percentage // 👈 قمنا بتحويل percentage إلى progress هنا
+            progress: result.percentage
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
 
-
 const updateProgress = async (req, res, next) => {
     try {
-        const { courseId } = req.params; // نأخذ الكورس من الرابط /:courseId
-        const studentId = req.user.id;   // نأخذ المعرف من التوكن (Auth Middleware)
-
-        // ملاحظة: xp_reward يجب أن يرسل من الـ Frontend أو يجلب من قاعدة البيانات
+        const { courseId } = req.params;
+        const studentId = req.user.id;
         const { xp_reward } = req.body;
 
-        // استدعاء الخدمة التي تقوم بالتحديث (XP + Percentage)
         const result = await courseService.trackProgress(studentId, courseId, xp_reward);
 
         res.status(200).json({
@@ -477,16 +386,15 @@ const updateProgress = async (req, res, next) => {
             data: result
         });
     } catch (error) {
-        // تمرير الخطأ للميدل وير العام (ErrorHandler)
         next(error);
     }
 };
+
 const getChapters = async (req, res) => {
     try {
         const { courseId } = req.params;
         const studentId = req.user.id;
 
-        // تعديل: نستخدم courseService بدلاً من chapterService
         const data = await courseService.getChaptersList(studentId, courseId);
 
         res.status(200).json({ success: true, data });
@@ -495,13 +403,11 @@ const getChapters = async (req, res) => {
     }
 };
 
-// 2. جلب الدروس
 const getLessons = async (req, res) => {
     try {
         const { courseId, chapterId } = req.params;
-        const studentId = req.user.id; // استخراج المعرف من التوكن (JWT)
+        const studentId = req.user.id;
 
-        // استدعاء الخدمة لمعالجة منطق الأقفال
         const lessons = await courseService.getLessonsList(studentId, courseId, chapterId);
 
         res.status(200).json({
@@ -518,7 +424,6 @@ const getLessonContents = async (req, res) => {
         const { courseId, chapterId, lessonId } = req.params;
         const studentId = req.user.id;
 
-
         const detailedContents = await courseService.getFormattedContents(studentId, courseId, chapterId, lessonId);
 
         res.status(200).json({ success: true, data: detailedContents });
@@ -528,13 +433,11 @@ const getLessonContents = async (req, res) => {
     }
 };
 
-
 const getLessonDetails = async (req, res) => {
     try {
         const { courseId, lessonId } = req.params;
         const studentId = req.user.id;
 
-        // الخدمة هنا تتحقق من أن الدرس ليس مغلقاً قبل إرسال البيانات
         const content = await courseService.getLessonContent(studentId, courseId, lessonId);
 
         res.status(200).json({
@@ -542,22 +445,15 @@ const getLessonDetails = async (req, res) => {
             data: content
         });
     } catch (error) {
-        // نرسل 403 إذا كان منطق التكيف (Adaptive Logic) يمنع الوصول
         res.status(403).json({ success: false, message: error.message });
     }
 };
-// 4. جلب نسبة التقدم الحالية
 
-// 5. إكمال الدرس (Action)
 const finishLesson = async (req, res) => {
     try {
-        // 1. استخراج البيانات من الطلب القادم من Postman
         const { courseId, chapterId, lessonId, xp_reward } = req.body;
-
-        // 2. استخراج معرف الطالب من التوكن (عبر الميدل وير auth)
         const studentId = req.user.id;
 
-        // 3. التحقق من وجود الحقول الأساسية لضمان عدم توقف السيرفر
         if (!courseId || !chapterId || !lessonId) {
             return res.status(400).json({
                 success: false,
@@ -565,8 +461,6 @@ const finishLesson = async (req, res) => {
             });
         }
 
-        // 4. استدعاء الخدمة (الالتزام بالاسم المتفق عليه)
-        // تأكد أن الترتيب هنا يطابق الترتيب في ملف الـ Service
         const result = await courseService.finishLessonAndAwardXP(
             studentId,
             courseId,
@@ -575,7 +469,6 @@ const finishLesson = async (req, res) => {
             xp_reward || 0
         );
 
-        // 5. رد النجاح
         res.status(200).json({
             success: true,
             message: "Lesson completed successfully!",
@@ -583,22 +476,16 @@ const finishLesson = async (req, res) => {
         });
 
     } catch (error) {
-        // إذا رمت الخدمة خطأ (مثل: الدرس لا ينتمي للفصل)، سيتم التقاطه هنا
         res.status(500).json({
             success: false,
             message: error.message
         });
     }
 };
-// إضافة هذه الدوال في ملف courseController.js
 
-// جلب الكورسات المتاحة للتسجيل
 const getAvailableCourses = async (req, res) => {
     try {
-        // 1. استخراج معرف الطالب من التوكن (تأكد أن Middleware يضعه في req.user)
         const studentId = req.user.id;
-
-        // 2. تمرير المعرف للخدمة (Service) ثم للـ Repository
         const courses = await courseService.getAvailableCourses(studentId);
 
         res.status(200).json({
@@ -615,18 +502,17 @@ const getAvailableCourses = async (req, res) => {
         });
     }
 };
-// جلب كورسات الطالب (My Courses)
-// داخل courseController.js
+
 const getMyCourses = async (req, res) => {
     try {
-        const studentId = req.user.id; // المعرف المستخرج من الـ Token
+        const studentId = req.user.id;
         const enrolledCourses = await courseService.getStudentDashboard(studentId);
 
         res.status(200).json({
             success: true,
             count: enrolledCourses.length,
             data: {
-                courses: enrolledCourses // كل كورس هنا سيحتوي الآن على last_completed_order
+                courses: enrolledCourses
             }
         });
     } catch (error) {
@@ -634,12 +520,9 @@ const getMyCourses = async (req, res) => {
     }
 };
 
-
 const getMyStudentCount = async (req, res) => {
     try {
-        // نأخذ معرف المدرس من التوكن (req.user.id)
         const teacherId = req.user.id;
-
         const stats = await courseService.getTeacherStats(teacherId);
 
         res.status(200).json({
@@ -654,9 +537,10 @@ const getMyStudentCount = async (req, res) => {
         });
     }
 };
+
 const getTeacherDashboard = async (req, res) => {
     try {
-        const teacherId = req.user.id; // التأكد أن التوكن يخص الأستاذ
+        const teacherId = req.user.id;
         const data = await courseService.getStudentsStatsForTeacher(teacherId);
 
         res.status(200).json({
@@ -672,6 +556,7 @@ const getTeacherDashboard = async (req, res) => {
         });
     }
 };
+
 const getAssessmentById = async (req, res, next) => {
     try {
         const { assessmentId } = req.params;
@@ -681,10 +566,11 @@ const getAssessmentById = async (req, res, next) => {
             data: assessment
         });
     } catch (error) {
-        console.error('Error in getAssessmentById:', error); // سيعرض تفاصيل الخطأ في الـ terminal
+        console.error('Error in getAssessmentById:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
 const getChapterLessons = async (req, res, next) => {
     try {
         const { chapterId } = req.params;
@@ -714,6 +600,7 @@ module.exports = {
     createAssessment,
     deleteAssessment,
     updateAssessment,
+    submitAssessment,
     updateQuestion,
     addQuestion,
     deleteQuestion,
@@ -730,7 +617,7 @@ module.exports = {
     getAvailableCourses,
     getMyCourses,
     getMyStudentCount,
-    getTeacherDashboard, 
+    getTeacherDashboard,
     getAssessmentById,
     getChapterLessons
 };
