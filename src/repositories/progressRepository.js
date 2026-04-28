@@ -23,11 +23,7 @@ const updateLessonProgress = async (studentId, skillId, xpReward) => {
              SET total_lessons_completed = total_lessons_completed + 1
              WHERE student_id = ?`,
             [studentId]
-        );
-        
-        if (globalResult.affectedRows === 0) {
-            console.warn('⚠️ [DB] No row updated in gamification_stats for student:', studentId);
-        }
+        ); 
 
         await connection.commit();
     } catch (error) {
@@ -142,6 +138,76 @@ const getUserGlobalStats = async (studentId) => {
         [studentId]
     );
     return rows[0] || null;
+};
+
+/**
+ * Increment skills unlocked counter
+ */
+const incrementSkillsUnlockedCount = async (studentId) => {
+    await db.query(
+        `UPDATE gamification_stats
+         SET skills_unlocked_count = skills_unlocked_count + 1
+         WHERE student_id = ?`,
+        [studentId]
+    );
+};
+
+/**
+ * Increment high-score quiz counter (score >= 90%)
+ */
+const incrementHighScoreQuizzes = async (studentId) => {
+    await db.query(
+        `UPDATE gamification_stats
+         SET high_score_quizzes = high_score_quizzes + 1
+         WHERE student_id = ?`,
+        [studentId]
+    );
+};
+
+/**
+ * Increment final exams passed counter
+ */
+const incrementFinalExamsPassed = async (studentId) => {
+    await db.query(
+        `UPDATE gamification_stats
+         SET final_exams_passed = final_exams_passed + 1
+         WHERE student_id = ?`,
+        [studentId]
+    );
+};
+
+/**
+ * Mark that the student has reached intermediate level in at least one skill
+ */
+const markIntermediateSkill = async (studentId) => {
+    await db.query(
+        `UPDATE gamification_stats
+         SET has_intermediate_skill = TRUE
+         WHERE student_id = ? AND has_intermediate_skill = FALSE`,
+        [studentId]
+    );
+};
+
+/**
+ * Mark that the student has reached advanced level in at least one skill
+ */
+const markAdvancedSkill = async (studentId) => {
+    await db.query(
+        `UPDATE gamification_stats
+         SET has_advanced_skill = TRUE
+         WHERE student_id = ? AND has_advanced_skill = FALSE`,
+        [studentId]
+    );
+};
+
+// Add these to the module.exports object
+module.exports = {
+    // ...existing exports...
+    incrementSkillsUnlockedCount,
+    incrementHighScoreQuizzes,
+    incrementFinalExamsPassed,
+    markIntermediateSkill,
+    markAdvancedSkill
 };
 
 module.exports = {
