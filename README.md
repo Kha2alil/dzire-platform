@@ -19,11 +19,24 @@ A modern, gamified learning management system focused on web development and pro
 
 ## AI Integration
 
-Built on the GitHub Models API (GPT-4o / Claude — free, OpenAI-compatible). All features are orchestrated through a single `aiService.js`:
+Built on the GitHub Models API (GPT-4o / Claude — free, OpenAI-compatible). All features are orchestrated through a single `aiService.js`.
+
+![Dzire AI Integration – From Rules to AI Tutor](DzireAiIdeas.png)
 
 - **Idea 1 – Rule-Based Adaptive Learning:** After a quiz, simple rules recommend the next action (review, continue, or unlock advanced content)
 - **Idea 2 – FAQ Chatbot:** A lightweight widget that matches student questions to a pre-defined knowledge base
 - **Idea 3 – LLM Tutor:** A conversational assistant that gives quiz hints, analyses teacher analytics, and recommends post-exam learning paths
+
+## System Architecture
+
+![Dzire AI Tutor – System Architecture](SystemArchitectureForDzire.png)
+
+The AI pipeline inside `aiService.js` runs through four stages:
+
+1. **Prompt Builder** – Assembles system prompts from the student's profile, quiz scores, and course data
+2. **Context Aggregator** – Collects relevant data from the database (skill progress, assessment history) before each API call
+3. **API Dispatcher** – Sends requests to the GitHub Models API, handling retries and rate limiting
+4. **Response Processor** – Parses LLM output and formats it for the frontend (hint text, analytics report, recommendation card)
 
 ## Tech Stack
 
@@ -31,7 +44,7 @@ Built on the GitHub Models API (GPT-4o / Claude — free, OpenAI-compatible). Al
 - MySQL (UUID primary keys)
 - JWT Authentication (Student / Teacher / Admin roles)
 - Nodemailer (email verification)
-- GitHub Models API (AI features)
+- GitHub Models API (AI features — free, OpenAI-compatible)
 - HTML / CSS / JS frontend (separate repository)
 
 ## Setup Instructions
