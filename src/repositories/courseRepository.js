@@ -192,7 +192,6 @@ const createLesson = async (chapterId, lessonData, courseId) => {
  * دالة تحديث المحتوى (فيديو، PDF، نص) - نسخة التصحيح
  */
 const updateLessonContent = async (id, contentData) => {
-
     const fields = [];
     const values = [];
 
@@ -209,21 +208,13 @@ const updateLessonContent = async (id, contentData) => {
         values.push(contentData.summary_text);
     }
 
-    if (fields.length === 0) {
-        console.log("❌ No fields to update!");
-        return false;
-    }
+    if (fields.length === 0) return false;
 
-    // لنجرب البحث بالـ ID كنص أولاً (كما يفعل UUID عادة)
     const query = `UPDATE lessons SET ${fields.join(', ')} WHERE id = ? OR id = UUID_TO_BIN(?)`;
     values.push(id);
     values.push(id);
 
-    console.log("📜 SQL Query:", query);
-    console.log("🔢 SQL Values:", values);
-
     const [result] = await db.query(query, values);
-
     return result.affectedRows > 0;
 };
 
@@ -623,6 +614,7 @@ const findEnrolledCoursesByStudent = async (studentId) => {
     const query = `
         SELECT 
             c.id, c.title, c.thumbnail_url, 
+            c.difficulty_level,
             e.progress_percentage, 
             e.last_completed_order, -- إضافة الحقل هنا
             e.status, e.enrolled_at,

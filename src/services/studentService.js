@@ -24,12 +24,30 @@ const searchStudents = async (teacherId, filters) => {
 };
 
 const enrollInCourse = async (studentId, courseId) => {
+    // Check if already enrolled
     const existingEnrollment = await studentRepository.findEnrollment(studentId, courseId);
     if (existingEnrollment) {
         throw new Error('You are already enrolled in this course');
     }
-    return await studentRepository.enrollStudent(studentId, courseId);
+
+    // Enroll
+    const enrollment = await studentRepository.enrollStudent(studentId, courseId);
+
+    // Send enrollment notification (non-blocking)
+    const courseRepository = require('../repositories/courseRepository');
+    const notificationService = require('./notificationService');
+    
+    courseRepository.findCourseById(courseId)
+        .then(course => {
+            if (course) {
+                return notificationService.notifyEnrollment(studentId, course.title);
+            }
+        })
+        .catch(err => console.error('Failed to send enrollment notification:', err.message));
+
+    return enrollment;
 };
+
 const fetchLeaderboard = async () => {
     const students = await studentRepository.getLeaderboard(10);
     

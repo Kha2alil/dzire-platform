@@ -84,6 +84,7 @@ const unlockSkillIfCourseCompleted = async (studentId, courseId) => {
             const courseRepository = require('../repositories/courseRepository');
             const course = await courseRepository.findCourseById(courseId);
             const skill = await skillRepository.findById(skillId);
+            const progressRepository = require('../repositories/progressRepository');
             
             await notificationService.sendNotification(
                 studentId,
@@ -92,6 +93,8 @@ const unlockSkillIfCourseCompleted = async (studentId, courseId) => {
                 `You have unlocked the "${skill.name}" skill by completing "${course.title}".`,
                 '/skills'
             );
+            await progressRepository.incrementSkillsUnlockedCount(studentId);
+            await badgeService.evaluateAndAwardBadges(studentId, 'skill_unlocked')
         } catch (err) {
             // Notification failure should not break the unlock flow
             console.error('Failed to send skill unlock notification:', err.message);
