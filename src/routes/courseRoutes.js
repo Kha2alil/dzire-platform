@@ -46,7 +46,7 @@ router.get(
 
 router.post('/', roleMiddleware('teacher'), courseController.createCourse);
 router.get('/', roleMiddleware('teacher'), courseController.getTeacherCourses);
-router.get('/:courseId', roleMiddleware('teacher'), courseController.getCourseDetails);
+router.get('/:courseId', roleMiddleware('teacher', 'student'), courseController.getCourseDetails);
 router.patch('/:courseId', roleMiddleware('teacher'), courseController.updateCourse);
 router.patch('/:courseId/publish', roleMiddleware('teacher'), courseController.togglePublishStatus);
 router.delete('/:courseId', roleMiddleware('teacher'), courseController.deleteCourse);
@@ -197,12 +197,7 @@ router.get('/:courseId/progress', roleMiddleware('student'), courseController.ge
 // تأكد من استيراد roleMiddleware و authMiddleware
 
 // جلب جميع التقييمات الخاصة بكورس (للمعلم أو المدير)
-router.get(
-    '/:courseId/assessments/:assessmentId',
-    authMiddleware,
-    roleMiddleware('teacher', 'student'),
-    courseController.getAssessmentById
-);
+
 
 router.get(
     '/chapters/:chapterId/lessons',
@@ -210,5 +205,5 @@ router.get(
     roleMiddleware('teacher'),
     courseController.getChapterLessons
 );
-
+router.get('/:courseId/subdomain', authMiddleware, roleMiddleware('student'), courseController.getCourseSubdomain);
 module.exports = router;

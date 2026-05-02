@@ -557,19 +557,7 @@ const getTeacherDashboard = async (req, res) => {
     }
 };
 
-const getAssessmentById = async (req, res, next) => {
-    try {
-        const { assessmentId } = req.params;
-        const assessment = await courseService.getAssessmentWithQuestions(assessmentId);
-        res.status(200).json({
-            success: true,
-            data: assessment
-        });
-    } catch (error) {
-        console.error('Error in getAssessmentById:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-};
+
 
 const getChapterLessons = async (req, res, next) => {
     try {
@@ -584,6 +572,16 @@ const getChapterLessons = async (req, res, next) => {
     }
 };
 
+const getCourseSubdomain = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const subdomain = await courseService.getCourseSubdomain(courseId);
+        if (!subdomain) return res.status(404).json({ success: false, message: 'Subdomain not found' });
+        res.status(200).json({ success: true, data: subdomain });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
 module.exports = {
     createCourse,
     getTeacherCourses,
@@ -618,6 +616,7 @@ module.exports = {
     getMyCourses,
     getMyStudentCount,
     getTeacherDashboard,
-    getAssessmentById,
-    getChapterLessons
+    
+    getChapterLessons,
+    getCourseSubdomain
 };

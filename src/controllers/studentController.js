@@ -62,5 +62,42 @@ const getLeaderboardData = async (req, res, next) => {
         next(error);
     }
 };
- 
-module.exports = { searchStudents , enroll , getLeaderboardData };
+const updateProgress = async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const { subdomainId, xpGained, targetXPOverride } = req.body;
+
+        if (!studentId || !subdomainId || xpGained === undefined) {
+            return res.status(400).json({ error: 'Missing required fields: studentId (params), subdomainId, xpGained (body)' });
+        }
+
+        const result = await studentService.updateStudentProgress(studentId, subdomainId, xpGained, targetXPOverride || null);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+};
+const getAssessmentById = async (req, res, next) => {
+    try {
+        const { assessmentId } = req.params;
+        const assessment = await studentService.getAssessmentWithQuestions(assessmentId);
+        res.status(200).json({
+            success: true,
+            data: assessment
+        });
+    } catch (error) {
+        console.error('Error in getAssessmentById:', error); // سيعرض تفاصيل الخطأ في الـ terminal
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+const getAssessmentsByCourse = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const assessments = await studentService.getAssessmentsByCourse(courseId);
+        res.status(200).json({ success: true, data: assessments });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+ };
+module.exports = { searchStudents , enroll , getLeaderboardData, updateProgress , getAssessmentById, getAssessmentsByCourse };

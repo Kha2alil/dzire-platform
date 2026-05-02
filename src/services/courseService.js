@@ -1,5 +1,7 @@
 const courseRepository = require('../repositories/courseRepository');
 const db = require('../config/database.js');
+const studentRepository = require('../repositories/studentRepository');
+
 
 const {
     validateCreateCourse,
@@ -36,7 +38,7 @@ const getTeacherCourses = async (teacherId) => {
     return courseRepository.findCoursesByTeacher(teacherId);
 };
 
-const getCourseDetails = async (courseId, teacherId) => {
+const getCourseDetails = async (courseId, teacherId,studentId) => {
     const course = await courseRepository.findCourseById(courseId);
     if (!course) {
         const error = new Error('الكورس غير موجود / Course not found');
@@ -44,11 +46,11 @@ const getCourseDetails = async (courseId, teacherId) => {
         throw error;
     }
 
-    if (course.teacher_id !== teacherId) {
-        const error = new Error('ليس لديك صلاحية لهذا الكورس / You do not have permission for this course');
-        error.statusCode = 403;
-        throw error;
-    }
+    // if (course.teacher_id !== teacherId ) {
+    //     const error = new Error('ليس لديك صلاحية لهذا الكورس / You do not have permission for this course');
+    //     error.statusCode = 403;
+    //     throw error;
+    // }
 
     const chapters = await courseRepository.findChaptersByCourse(courseId);
 
@@ -597,16 +599,34 @@ const getFormattedContents = async (studentId, courseId, chapterId, lessonId) =>
 };
 
 const finishLessonAndAwardXP = async (studentId, courseId, chapterId, lessonId, xp_reward) => {
+    // 1. جلب بيانات الدرس أولاً لمعرفة ترتيبه (order_index)
+    // 1. جلب بيانات الدرس (للتأكد من وجوده ومعرفة ترتيبه)
     const lesson = await courseRepository.getLessonById(lessonId);
+
     if (!lesson) {
         console.error(`Lesson not found: ${lessonId}`);
-        throw new Error("The lesson does not exist");
+        
+        throw new Error("Lesson does not exist");
     }
+
+    // 2. جلب معلومات الكورس (subdomain_id و difficulty_level)
+    const courseInfo = await studentRepository.getCourseInfo(courseId);
+    if (!courseInfo) {
+        throw new Error("Course not found");
+    }
+    const { subdomain_id: subdomainId, difficulty_level: courseLevel } = courseInfo;
+    const courseLevelNormalized = courseLevel.charAt(0).toUpperCase() + courseLevel.slice(1).toLowerCase();
+
+    // 3. جلب المستوى الحالي للطالب في هذا المجال الفرعي
+    const subdomainStats = await studentRepository.getSubdomainStats(studentId, subdomainId);
+    const studentSubdomainLevel = subdomainStats ? subdomainStats.new_level : 'Beginner';
 
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
 
+        // 2. محاولة تحديث التقدم (ستنجح فقط إذا كان الدرس جديداً على الطالب)
+        // 4. تحديث التقدم (يتم فقط إذا كان الدرس جديداً)
         const isUpdated = await courseRepository.updateEnrollmentProgress(
             connection,
             studentId,
@@ -615,26 +635,15 @@ const finishLessonAndAwardXP = async (studentId, courseId, chapterId, lessonId, 
         );
 
         if (isUpdated) {
-            await courseRepository.updateStudentXP(connection, studentId, xp_reward);
+            // 3. نزيد الـ XP فقط إذا زاد التقدم (أي أن الدرس لم يسبق إكماله)
+         
+            // 5. إضافة XP إلى total_xp (دائماً)
+
+
             await connection.commit();
-
-            const progressAggregator = require('./progressAggregator');
-
-            await progressAggregator.handleLessonCompleted(studentId, courseId, lessonId, xp_reward)
-                .catch(err => console.error('Badge evaluation failed:', err.message));
-
-            const enrollment = await courseRepository.getEnrollmentData(studentId, courseId);
-            if (enrollment && enrollment.progress_percentage >= 100) {
-                await progressAggregator.handleCourseCompleted(studentId, courseId)
-                    .catch(err => console.error('Course completion handling failed:', err.message));
-
-                const skillService = require('./skillService');
-                skillService.unlockSkillIfCourseCompleted(studentId, courseId)
-                    .catch(err => console.error('Skill unlock failed:', err.message));
-            }
-
             return { message: "Great! Progress updated and XP awarded" };
         } else {
+            // إذا لم يتأثر أي سطر، فهذا يعني أن الطالب أعاد درساً قديماً
             await connection.rollback();
             return { message: "You have already completed this lesson, no new XP to award" };
         }
@@ -778,25 +787,19 @@ const _gradeSubmission = (questions, studentAnswers) => {
 // ADDITIONAL FUNCTIONS (from dev branch)
 // ============================================================
 
-const getAssessmentWithQuestions = async (assessmentId) => {
-    const assessment = await courseRepository.findAssessmentById(assessmentId);
-    if (!assessment) {
-        const error = new Error('Assessment not found');
-        error.statusCode = 404;
-        throw error;
-    }
 
-    const questions = await courseRepository.findQuestionsByAssessmentId(assessmentId);
-
-    return {
-        ...assessment,
-        questions
-    };
-};
 
 const getLessonsByChapter = async (chapterId) => {
     return await courseRepository.findLessonsByChapter(chapterId);
 };
+
+// services/courseService.js
+
+const getCourseSubdomain = async (courseId) => {
+    return await courseRepository.getCourseSubdomain(courseId);
+};
+
+
 
 // ============================================================
 // Exports
@@ -836,6 +839,6 @@ module.exports = {
     getTeacherStats,
     getStudentsStatsForTeacher,
     submitAssessment,
-    getAssessmentWithQuestions,
-    getLessonsByChapter
+    getLessonsByChapter, 
+    getCourseSubdomain
 };

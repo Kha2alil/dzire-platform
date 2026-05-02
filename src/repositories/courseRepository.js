@@ -20,7 +20,7 @@ const createCourse = async (courseData) => {
         thumbnail_url || null,
         skill_id || null      // ✅ added
     ]);
-    
+
     // Fetch the created course
     const [rows] = await db.query(
         'SELECT * FROM courses WHERE teacher_id = ? AND title = ? ORDER BY created_at DESC LIMIT 1',
@@ -65,7 +65,7 @@ const findCoursesByTeacher = async (teacherId) => {
 const updateCourse = async (id, updateData) => {
     const fields = [];
     const values = [];
-    
+
     if (updateData.title !== undefined) { fields.push('title = ?'); values.push(updateData.title); }
     if (updateData.description !== undefined) { fields.push('description = ?'); values.push(updateData.description); }
     if (updateData.difficulty_level !== undefined) { fields.push('difficulty_level = ?'); values.push(updateData.difficulty_level); }
@@ -74,7 +74,7 @@ const updateCourse = async (id, updateData) => {
 
     if (fields.length === 0) return null;
     values.push(id);
-    
+
     const query = `UPDATE courses SET ${fields.join(', ')} WHERE id = ?`;
     await db.query(query, values);
     return findCourseById(id);
@@ -98,7 +98,7 @@ const deleteCourse = async (id) => {
 
 const createChapter = async (courseId, chapterData) => {
     const { title, order_index } = chapterData;
-    
+
     let finalOrder = order_index;
     if (finalOrder === undefined || finalOrder === null) {
         // Get the highest order_index for this course
@@ -108,10 +108,10 @@ const createChapter = async (courseId, chapterData) => {
         );
         finalOrder = (rows[0].maxOrder || 0) + 1;
     }
-    
+
     const query = `INSERT INTO chapters (course_id, title, order_index) VALUES (?, ?, ?)`;
     await db.query(query, [courseId, title, finalOrder]);
-    
+
     const [newRows] = await db.query(
         'SELECT * FROM chapters WHERE course_id = ? AND title = ? ORDER BY order_index DESC LIMIT 1',
         [courseId, title]
@@ -161,7 +161,7 @@ const deleteChapter = async (id) => {
 
 const createLesson = async (chapterId, lessonData, courseId) => {
     const { title, order_index, duration, is_free, xp_reward, summary_text } = lessonData;
-    
+
     let finalOrder = order_index;
     if (finalOrder === undefined || finalOrder === null) {
         // Get the highest order_index for lessons in this chapter
@@ -171,7 +171,7 @@ const createLesson = async (chapterId, lessonData, courseId) => {
         );
         finalOrder = (rows[0].maxOrder || 0) + 1;
     }
-    
+
     const query = `
         INSERT INTO lessons (course_id, chapter_id, title, order_index, duration, is_free, xp_reward, summary_text)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -180,7 +180,7 @@ const createLesson = async (chapterId, lessonData, courseId) => {
         courseId, chapterId, title, finalOrder,
         duration || null, is_free || false, xp_reward || 0, summary_text || null
     ]);
-    
+
     const [newRows] = await db.query(
         'SELECT * FROM lessons WHERE chapter_id = ? AND title = ? ORDER BY order_index DESC LIMIT 1',
         [chapterId, title]
@@ -535,9 +535,12 @@ const getRawContentsByLesson = async (courseId, chapterId, lessonId) => {
 const updateStudentXP = async (executor, studentId, xpAmount) => {
     const query = `
         UPDATE gamification_stats 
-        SET total_xp = total_xp + ?, updated_at = NOW() 
+        SET total_xp = total_xp + ?, 
+            accumulated_xp = accumulated_xp + ?, 
+            updated_at = NOW() 
         WHERE student_id = ?`;
-    await executor.query(query, [xpAmount, studentId]);
+
+    await executor.query(query, [xpAmount, xpAmount, studentId]);
 };
 // ب. تحديث نسبة التقدم في جدول enrollments
 const updateEnrollmentProgress = async (executor, studentId, courseId, lessonOrderIndex) => {
@@ -602,7 +605,9 @@ const findAvailableCourses = async (studentId) => {
         WHERE c.is_published = 1
           AND pr.student_id = ?
           -- استخدام LOWER و TRIM لتجنب مشاكل حالة الأحرف والمسافات الزائدة
-          AND LOWER(TRIM(c.difficulty_level)) = LOWER(TRIM(pr.level))
+          -- شرط المستوى: مستوى الكورس <= مستوى الطالب (في نفس الـ subdomain)
+          AND FIELD(LOWER(TRIM(c.difficulty_level)), 'beginner', 'intermediate', 'advanced')
+              <= FIELD(LOWER(TRIM(pr.level)), 'beginner', 'intermediate', 'advanced')
         ORDER BY c.created_at DESC
     `;
 
@@ -699,6 +704,16 @@ const findQuestionsByAssessmentIds = async (assessmentId) => {
         options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options
     }));
 };
+const getCourseSubdomain = async (courseId) => {
+    const [rows] = await db.query(
+        `SELECT s.id, s.name 
+         FROM subdomains s
+         JOIN courses c ON c.subdomain_id = s.id
+         WHERE c.id = ?`,
+        [courseId]
+    );
+    return rows[0] || null;
+};
 // لا تنسَ إضافتهم في module.exports في نهاية الملف
 module.exports = {
     createCourse, findCourseById, findCoursesByTeacher, updateCourse, updateCourseThumbnail, deleteCourse,
@@ -707,6 +722,6 @@ module.exports = {
     createAssessment, findAssessmentById, findAssessmentsByChapter, updateAssessment, deleteAssessment,
     updateQuestion, addQuestion, deleteQuestion, findQuestionById, searchCourses, findQuestionsByAssessmentId,
     getAllChapters, getAssessmentResult, getLessonsByChapter, getLessonById, getTotalCourseLessons,
-    getEnrollmentData, getRawContentsByLesson, updateStudentXP, updateEnrollmentProgress, checkLessonBelongsToChapter, findAvailableCourses, findEnrolledCoursesByStudent , 
-    getTeacherStudentCount , getStudentProgressInCourses , findAssessmentByIds , findQuestionsByAssessmentIds 
+    getEnrollmentData, getRawContentsByLesson, updateStudentXP, updateEnrollmentProgress, checkLessonBelongsToChapter, findAvailableCourses, findEnrolledCoursesByStudent,
+    getTeacherStudentCount, getStudentProgressInCourses, findAssessmentByIds, findQuestionsByAssessmentIds, getCourseSubdomain
 };
