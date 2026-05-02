@@ -60,7 +60,7 @@ const findEnrollment = async (studentId, courseId) => {
 
 const getLeaderboard = async (limit = 10) => {
     const query = `
-        SELECT 
+        SELECT DISTINCT
             u.id, 
             u.full_name AS Name, 
             gs.total_xp AS XP, 
@@ -70,13 +70,127 @@ const getLeaderboard = async (limit = 10) => {
         INNER JOIN gamification_stats gs ON u.id = gs.student_id
         LEFT JOIN profiles p ON u.id = p.user_id
         WHERE u.role = 'student' 
-        ORDER BY gs.total_xp DESC 
+        GROUP BY u.id, u.full_name, gs.total_xp, p.avatar_url, p.specialization
+        ORDER BY XP DESC 
         LIMIT ?
     `;
     const [rows] = await db.query(query, [limit]);
     return rows;
 };
+const getCourseInfo = async (courseId) => {
+    const [rows] = await db.query(
+        `SELECT subdomain_id, difficulty_level FROM courses WHERE id = ?`,
+        [courseId]
+    );
+    return rows[0] || null;
+};
+const getSubdomainStats = async (studentId, subdomainId) => {
+    const [rows] = await db.query(
+        `SELECT accumulated_xp, new_level, current_level 
+         FROM gamification_stats 
+         WHERE student_id = ? AND subdomain_id = ?`,
+        [studentId, subdomainId]
+    );
+    if (rows.length === 0) return null;
+    return rows[0];
+};
 
+// تحديث accumulated_xp فقط
+const updateSubdomainXP = async (studentId, subdomainId, newXP) => {
+    await db.query(
+        `UPDATE gamification_stats 
+         SET accumulated_xp = ?, updated_at = NOW() 
+         WHERE student_id = ? AND subdomain_id = ?`,
+        [newXP, studentId, subdomainId]
+    );
+};
+
+// ترقية مستوى subdomain وإعادة ضبط accumulated_xp إلى 0
+const upgradeSubdomainLevel = async (studentId, subdomainId, newLevel) => {
+    await db.query(
+        `UPDATE gamification_stats 
+         SET new_level = ?, accumulated_xp = 0, updated_at = NOW() 
+         WHERE student_id = ? AND subdomain_id = ?`,
+        [newLevel, studentId, subdomainId]
+    );
+};
+
+// جلب إحصائيات المستوى العام (global)
+const getGlobalStats = async (studentId) => {
+    // نبحث عن أي صف للطالب، ونأخذ total_xp و current_level من أول صف
+    const [rows] = await db.query(
+        `SELECT total_xp, current_level 
+         FROM gamification_stats 
+         WHERE student_id = ? 
+         LIMIT 1`,
+        [studentId]
+    );
+    if (rows.length === 0) return null;
+    return rows[0];
+};
+// تحديث المستوى العام
+const updateGlobalStats = async (studentId, newTotalXP, newLevel) => {
+    await db.query(
+        `UPDATE gamification_stats 
+         SET total_xp = ?, current_level = ?, updated_at = NOW() 
+         WHERE student_id = ?`,
+        [newTotalXP, newLevel, studentId]
+    );
+};
+
+// جلب عدد المواضيع (topics) في subdomain لحساب targetXP
+const getTopicCount = async (subdomainId) => {
+    const [rows] = await db.query(
+        `SELECT COUNT(*) as count FROM courses WHERE subdomain_id = ? AND is_published = 1`,
+        [subdomainId]
+    );
+    return rows[0].count || 0; // إذا لم توجد دورات، سيعود 0
+};
+const getPlacementLevel = async (studentId, subdomainId) => {
+    const [rows] = await db.query(
+        `SELECT level FROM placement_results 
+         WHERE student_id = ? AND subdomain_id = ?`,
+        [studentId, subdomainId]
+    );
+    if (rows.length === 0) return null;
+    return rows[0].level; // 'beginner', 'intermediate', 'advanced' (نفس القيم)
+};
+const getSkillsBySubdomain = async (subdomainId) => {
+    const [rows] = await db.query(
+        `SELECT DISTINCT s.id 
+         FROM skills s
+         JOIN courses c ON c.skill_id = s.id
+         WHERE c.subdomain_id = ? AND c.is_published = 1`,
+        [subdomainId]
+    );
+    return rows.map(row => row.id);
+};
+
+// التحقق من وجود كورس مكتمل بنسبة 100% لمهارة معينة بمستوى محدد
+const hasCompletedCourseForSkill = async (studentId, skillId, difficultyLevel) => {
+    const [rows] = await db.query(
+        `SELECT COUNT(*) as count
+         FROM enrollments e
+         JOIN courses c ON e.course_id = c.id
+         WHERE e.student_id = ? 
+           AND c.skill_id = ?
+           AND c.difficulty_level = ?
+           AND e.progress_percentage = 100`,
+        [studentId, skillId, difficultyLevel]
+    );
+    return rows[0].count > 0;
+};
+const getAssessmentsByCourse = async (courseId) => {
+    const [rows] = await db.query(
+        `SELECT id, title, type, passing_score, chapter_id , lesson_id
+         FROM assessments 
+         WHERE course_id = ?`,
+        [courseId]
+    );
+    return rows;
+};
 // تأكد من إضافة getLeaderboard لـ module.exports
 
-module.exports = { searchStudents , enrollStudent, findEnrollment , getLeaderboard};
+
+
+module.exports = { searchStudents, enrollStudent, findEnrollment, getLeaderboard, getTopicCount, getCourseInfo, getSubdomainStats, updateSubdomainXP, upgradeSubdomainLevel, getGlobalStats, updateGlobalStats, getPlacementLevel, getSkillsBySubdomain, hasCompletedCourseForSkill, getAssessmentsByCourse };

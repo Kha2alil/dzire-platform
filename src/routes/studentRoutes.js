@@ -21,3 +21,17 @@ router.post('/enroll',
 );
 router.get('/leaderboard', authMiddleware ,roleMiddleware('student') , studentController.getLeaderboardData);
 module.exports = router;
+router.post('/:studentId/update', authMiddleware, studentController.updateProgress);
+router.get(
+    '/:courseId/assessments/:assessmentId',
+    authMiddleware,
+    roleMiddleware('teacher', 'student'),
+    studentController.getAssessmentById
+);
+
+router.get(
+    '/courses/:courseId/assessments',
+    authMiddleware,
+    roleMiddleware('student'),
+    studentController.getAssessmentsByCourse
+);

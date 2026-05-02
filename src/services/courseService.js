@@ -1,5 +1,7 @@
 const courseRepository = require('../repositories/courseRepository');
 const db = require('../config/database.js');
+const studentRepository = require('../repositories/studentRepository');
+
 
 const {
     validateCreateCourse,
@@ -36,7 +38,7 @@ const getTeacherCourses = async (teacherId) => {
     return courseRepository.findCoursesByTeacher(teacherId);
 };
 
-const getCourseDetails = async (courseId, teacherId) => {
+const getCourseDetails = async (courseId, teacherId,studentId) => {
     const course = await courseRepository.findCourseById(courseId);
     if (!course) {
         const error = new Error('الكورس غير موجود / Course not found');
@@ -44,11 +46,11 @@ const getCourseDetails = async (courseId, teacherId) => {
         throw error;
     }
 
-    if (course.teacher_id !== teacherId) {
-        const error = new Error('ليس لديك صلاحية لهذا الكورس / You do not have permission for this course');
-        error.statusCode = 403;
-        throw error;
-    }
+    // if (course.teacher_id !== teacherId ) {
+    //     const error = new Error('ليس لديك صلاحية لهذا الكورس / You do not have permission for this course');
+    //     error.statusCode = 403;
+    //     throw error;
+    // }
 
     const chapters = await courseRepository.findChaptersByCourse(courseId);
 
@@ -597,16 +599,34 @@ const getFormattedContents = async (studentId, courseId, chapterId, lessonId) =>
 };
 
 const finishLessonAndAwardXP = async (studentId, courseId, chapterId, lessonId, xp_reward) => {
+    // 1. جلب بيانات الدرس أولاً لمعرفة ترتيبه (order_index)
+    // 1. جلب بيانات الدرس (للتأكد من وجوده ومعرفة ترتيبه)
     const lesson = await courseRepository.getLessonById(lessonId);
+
     if (!lesson) {
         console.error(`Lesson not found: ${lessonId}`);
-        throw new Error("The lesson does not exist");
+        
+        throw new Error("Lesson does not exist");
     }
+
+    // 2. جلب معلومات الكورس (subdomain_id و difficulty_level)
+    const courseInfo = await studentRepository.getCourseInfo(courseId);
+    if (!courseInfo) {
+        throw new Error("Course not found");
+    }
+    const { subdomain_id: subdomainId, difficulty_level: courseLevel } = courseInfo;
+    const courseLevelNormalized = courseLevel.charAt(0).toUpperCase() + courseLevel.slice(1).toLowerCase();
+
+    // 3. جلب المستوى الحالي للطالب في هذا المجال الفرعي
+    const subdomainStats = await studentRepository.getSubdomainStats(studentId, subdomainId);
+    const studentSubdomainLevel = subdomainStats ? subdomainStats.new_level : 'Beginner';
 
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
 
+        // 2. محاولة تحديث التقدم (ستنجح فقط إذا كان الدرس جديداً على الطالب)
+        // 4. تحديث التقدم (يتم فقط إذا كان الدرس جديداً)
         const isUpdated = await courseRepository.updateEnrollmentProgress(
             connection,
             studentId,
@@ -615,26 +635,15 @@ const finishLessonAndAwardXP = async (studentId, courseId, chapterId, lessonId, 
         );
 
         if (isUpdated) {
-            await courseRepository.updateStudentXP(connection, studentId, xp_reward);
+            // 3. نزيد الـ XP فقط إذا زاد التقدم (أي أن الدرس لم يسبق إكماله)
+         
+            // 5. إضافة XP إلى total_xp (دائماً)
+
+
             await connection.commit();
-
-            const progressAggregator = require('./progressAggregator');
-
-            await progressAggregator.handleLessonCompleted(studentId, courseId, lessonId, xp_reward)
-                .catch(err => console.error('Badge evaluation failed:', err.message));
-
-            const enrollment = await courseRepository.getEnrollmentData(studentId, courseId);
-            if (enrollment && enrollment.progress_percentage >= 100) {
-                await progressAggregator.handleCourseCompleted(studentId, courseId)
-                    .catch(err => console.error('Course completion handling failed:', err.message));
-
-                const skillService = require('./skillService');
-                skillService.unlockSkillIfCourseCompleted(studentId, courseId)
-                    .catch(err => console.error('Skill unlock failed:', err.message));
-            }
-
             return { message: "Great! Progress updated and XP awarded" };
         } else {
+            // إذا لم يتأثر أي سطر، فهذا يعني أن الطالب أعاد درساً قديماً
             await connection.rollback();
             return { message: "You have already completed this lesson, no new XP to award" };
         }
@@ -687,7 +696,8 @@ const getStudentsStatsForTeacher = async (teacherId) => {
 // ASSESSMENT SUBMISSION
 // ============================================================
 
-const submitAssessment = async (studentId, assessmentId, answers) => {
+const submitAssessment = async (studentId, assessmentId, studentAnswers) => {
+    // 1. جلب التقييم
     const assessment = await courseRepository.findAssessmentById(assessmentId);
     if (!assessment) {
         const error = new Error('Assessment not found');
@@ -695,6 +705,7 @@ const submitAssessment = async (studentId, assessmentId, answers) => {
         throw error;
     }
 
+    // 2. التحقق إذا كان الطالب قد اجتاز هذا التقييم من قبل (اختياري)
     const alreadyPassed = await _hasAlreadyPassedAssessment(studentId, assessmentId);
     if (alreadyPassed) {
         return {
@@ -703,6 +714,7 @@ const submitAssessment = async (studentId, assessmentId, answers) => {
         };
     }
 
+    // 3. جلب جميع أسئلة التقييم مع correct_answer و points
     const questions = await courseRepository.findQuestionsByAssessmentId(assessmentId);
     if (!questions.length) {
         const error = new Error('No questions found for this assessment');
@@ -710,12 +722,54 @@ const submitAssessment = async (studentId, assessmentId, answers) => {
         throw error;
     }
 
-    const score = _gradeSubmission(questions, answers);
-    const passingScore = assessment.passing_score || 60;
-    const passed = score >= passingScore;
+    // 4. خريطة السؤال → بياناته
+    const questionMap = new Map(questions.map(q => [q.id, q]));
 
+    let totalPoints = 0;
+    let earnedPoints = 0;
+
+    // 5. تصحيح كل إجابة
+    for (const ans of studentAnswers) {
+        const { questionId, answer } = ans;
+        const question = questionMap.get(questionId);
+        if (!question) continue; // تجاهل الأسئلة غير الموجودة
+
+        totalPoints += question.points;
+
+        let isCorrect = false;
+        const correctAnswerRaw = question.correct_answer;
+        if (correctAnswerRaw === null || correctAnswerRaw === undefined) continue;
+
+        // معالجة الحالات المختلفة للإجابة
+        if (Array.isArray(answer)) {
+            // إذا كانت الإجابة مصفوفة (checkbox)
+            const expected = correctAnswerRaw.split(',').map(s => s.trim());
+            const actual = answer.map(a => a.trim()).sort();
+            const expectedSorted = expected.sort();
+            isCorrect = actual.length === expectedSorted.length && actual.every((val, idx) => val === expectedSorted[idx]);
+        } else if (typeof answer === 'string') {
+            // إذا كانت الإجابة نصًا (radio أو نص حر)
+            const userAnswer = answer.trim();
+            const correctAnswer = correctAnswerRaw.trim();
+            isCorrect = (userAnswer === correctAnswer);
+            // يمكن إضافة تجاهل الحالة: userAnswer.toLowerCase() === correctAnswer.toLowerCase()
+        } else {
+            // أي نوع آخر (غير متوقع) -> غير صحيح
+            isCorrect = false;
+        }
+
+        if (isCorrect) {
+            earnedPoints += question.points;
+        }
+    }
+
+    const score = totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0;
+    const passed = score >= (assessment.passing_score || 60);
+
+    // 6. حفظ المحاولة
     await _saveStudentAssessment(studentId, assessmentId, score, passed);
 
+    // 7. إذا اجتاز، تحديث الشارات (اختياري)
     if (passed) {
         const progressAggregator = require('./progressAggregator');
         await progressAggregator.handleQuizPassed(studentId, assessmentId, score, passed)
@@ -724,9 +778,9 @@ const submitAssessment = async (studentId, assessmentId, answers) => {
 
     return {
         success: true,
-        score,
+        score: Math.round(score),
         passed,
-        passingScore,
+        passingScore: assessment.passing_score || 60,
         message: passed ? 'Congratulations! You passed the assessment.' : 'You did not pass. Try again!'
     };
 };
@@ -778,25 +832,19 @@ const _gradeSubmission = (questions, studentAnswers) => {
 // ADDITIONAL FUNCTIONS (from dev branch)
 // ============================================================
 
-const getAssessmentWithQuestions = async (assessmentId) => {
-    const assessment = await courseRepository.findAssessmentById(assessmentId);
-    if (!assessment) {
-        const error = new Error('Assessment not found');
-        error.statusCode = 404;
-        throw error;
-    }
 
-    const questions = await courseRepository.findQuestionsByAssessmentId(assessmentId);
-
-    return {
-        ...assessment,
-        questions
-    };
-};
 
 const getLessonsByChapter = async (chapterId) => {
     return await courseRepository.findLessonsByChapter(chapterId);
 };
+
+// services/courseService.js
+
+const getCourseSubdomain = async (courseId) => {
+    return await courseRepository.getCourseSubdomain(courseId);
+};
+
+
 
 // ============================================================
 // Exports
@@ -836,6 +884,6 @@ module.exports = {
     getTeacherStats,
     getStudentsStatsForTeacher,
     submitAssessment,
-    getAssessmentWithQuestions,
-    getLessonsByChapter
+    getLessonsByChapter, 
+    getCourseSubdomain
 };

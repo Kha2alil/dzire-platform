@@ -239,8 +239,24 @@ const updateAssessment = async (req, res, next) => {
 const submitAssessment = async (req, res, next) => {
     try {
         const { assessmentId } = req.params;
-        const { answers } = req.body;
+        let { answers } = req.body;
         const studentId = req.user.id;
+
+        // تحويل answers إلى مصفوفة إذا كانت كائنًا (مثل {0: {...}, 1: {...}})
+        if (answers && !Array.isArray(answers)) {
+            if (typeof answers === 'object') {
+                answers = Object.values(answers);
+            } else {
+                answers = [answers];
+            }
+        }
+
+        if (!answers || !Array.isArray(answers)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid answers format. Expected an array.'
+            });
+        }
 
         const result = await courseService.submitAssessment(studentId, assessmentId, answers);
 
@@ -557,19 +573,7 @@ const getTeacherDashboard = async (req, res) => {
     }
 };
 
-const getAssessmentById = async (req, res, next) => {
-    try {
-        const { assessmentId } = req.params;
-        const assessment = await courseService.getAssessmentWithQuestions(assessmentId);
-        res.status(200).json({
-            success: true,
-            data: assessment
-        });
-    } catch (error) {
-        console.error('Error in getAssessmentById:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-};
+
 
 const getChapterLessons = async (req, res, next) => {
     try {
@@ -584,6 +588,16 @@ const getChapterLessons = async (req, res, next) => {
     }
 };
 
+const getCourseSubdomain = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const subdomain = await courseService.getCourseSubdomain(courseId);
+        if (!subdomain) return res.status(404).json({ success: false, message: 'Subdomain not found' });
+        res.status(200).json({ success: true, data: subdomain });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
 module.exports = {
     createCourse,
     getTeacherCourses,
@@ -618,6 +632,7 @@ module.exports = {
     getMyCourses,
     getMyStudentCount,
     getTeacherDashboard,
-    getAssessmentById,
-    getChapterLessons
+    
+    getChapterLessons,
+    getCourseSubdomain
 };
