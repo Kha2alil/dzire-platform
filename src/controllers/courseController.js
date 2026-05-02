@@ -239,8 +239,24 @@ const updateAssessment = async (req, res, next) => {
 const submitAssessment = async (req, res, next) => {
     try {
         const { assessmentId } = req.params;
-        const { answers } = req.body;
+        let { answers } = req.body;
         const studentId = req.user.id;
+
+        // تحويل answers إلى مصفوفة إذا كانت كائنًا (مثل {0: {...}, 1: {...}})
+        if (answers && !Array.isArray(answers)) {
+            if (typeof answers === 'object') {
+                answers = Object.values(answers);
+            } else {
+                answers = [answers];
+            }
+        }
+
+        if (!answers || !Array.isArray(answers)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid answers format. Expected an array.'
+            });
+        }
 
         const result = await courseService.submitAssessment(studentId, assessmentId, answers);
 

@@ -696,7 +696,8 @@ const getStudentsStatsForTeacher = async (teacherId) => {
 // ASSESSMENT SUBMISSION
 // ============================================================
 
-const submitAssessment = async (studentId, assessmentId, answers) => {
+const submitAssessment = async (studentId, assessmentId, studentAnswers) => {
+    // 1. جلب التقييم
     const assessment = await courseRepository.findAssessmentById(assessmentId);
     if (!assessment) {
         const error = new Error('Assessment not found');
@@ -704,6 +705,7 @@ const submitAssessment = async (studentId, assessmentId, answers) => {
         throw error;
     }
 
+    // 2. التحقق إذا كان الطالب قد اجتاز هذا التقييم من قبل (اختياري)
     const alreadyPassed = await _hasAlreadyPassedAssessment(studentId, assessmentId);
     if (alreadyPassed) {
         return {
@@ -712,6 +714,7 @@ const submitAssessment = async (studentId, assessmentId, answers) => {
         };
     }
 
+    // 3. جلب جميع أسئلة التقييم مع correct_answer و points
     const questions = await courseRepository.findQuestionsByAssessmentId(assessmentId);
     if (!questions.length) {
         const error = new Error('No questions found for this assessment');
@@ -719,12 +722,54 @@ const submitAssessment = async (studentId, assessmentId, answers) => {
         throw error;
     }
 
-    const score = _gradeSubmission(questions, answers);
-    const passingScore = assessment.passing_score || 60;
-    const passed = score >= passingScore;
+    // 4. خريطة السؤال → بياناته
+    const questionMap = new Map(questions.map(q => [q.id, q]));
 
+    let totalPoints = 0;
+    let earnedPoints = 0;
+
+    // 5. تصحيح كل إجابة
+    for (const ans of studentAnswers) {
+        const { questionId, answer } = ans;
+        const question = questionMap.get(questionId);
+        if (!question) continue; // تجاهل الأسئلة غير الموجودة
+
+        totalPoints += question.points;
+
+        let isCorrect = false;
+        const correctAnswerRaw = question.correct_answer;
+        if (correctAnswerRaw === null || correctAnswerRaw === undefined) continue;
+
+        // معالجة الحالات المختلفة للإجابة
+        if (Array.isArray(answer)) {
+            // إذا كانت الإجابة مصفوفة (checkbox)
+            const expected = correctAnswerRaw.split(',').map(s => s.trim());
+            const actual = answer.map(a => a.trim()).sort();
+            const expectedSorted = expected.sort();
+            isCorrect = actual.length === expectedSorted.length && actual.every((val, idx) => val === expectedSorted[idx]);
+        } else if (typeof answer === 'string') {
+            // إذا كانت الإجابة نصًا (radio أو نص حر)
+            const userAnswer = answer.trim();
+            const correctAnswer = correctAnswerRaw.trim();
+            isCorrect = (userAnswer === correctAnswer);
+            // يمكن إضافة تجاهل الحالة: userAnswer.toLowerCase() === correctAnswer.toLowerCase()
+        } else {
+            // أي نوع آخر (غير متوقع) -> غير صحيح
+            isCorrect = false;
+        }
+
+        if (isCorrect) {
+            earnedPoints += question.points;
+        }
+    }
+
+    const score = totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0;
+    const passed = score >= (assessment.passing_score || 60);
+
+    // 6. حفظ المحاولة
     await _saveStudentAssessment(studentId, assessmentId, score, passed);
 
+    // 7. إذا اجتاز، تحديث الشارات (اختياري)
     if (passed) {
         const progressAggregator = require('./progressAggregator');
         await progressAggregator.handleQuizPassed(studentId, assessmentId, score, passed)
@@ -733,9 +778,9 @@ const submitAssessment = async (studentId, assessmentId, answers) => {
 
     return {
         success: true,
-        score,
+        score: Math.round(score),
         passed,
-        passingScore,
+        passingScore: assessment.passing_score || 60,
         message: passed ? 'Congratulations! You passed the assessment.' : 'You did not pass. Try again!'
     };
 };
