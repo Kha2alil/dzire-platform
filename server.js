@@ -34,7 +34,7 @@ const adminRoutes       = require('./src/routes/adminRoutes');
 const skills            = require('./src/routes/skillRoutes');
 const badgeRoutes       = require('./src/routes/badgeRoutes');
 const notificationRoutes = require('./src/routes/notificationRoutes');
-
+const faqRoutes         = require('./src/routes/faqRoutes');
 const authMiddleware     = require('./src/middlewares/authMiddleware');
 const OnboardingController = require('./src/controllers/onboardingController');
 
@@ -50,6 +50,7 @@ app.use('/api/admin',         adminRoutes);
 app.get('/api/subdomains',    authMiddleware, OnboardingController.getSubdomains);
 app.use('/api/skills',        skills);
 app.use('/api/badges',        badgeRoutes);
+app.use('/api/chat',          faqRoutes);
 
 // ── Global error handler (must be last) ──
 const errorHandler = require('./src/middlewares/errorHandler');
