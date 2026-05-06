@@ -511,39 +511,12 @@ const trackProgress = async (userId, courseId) => {
 
 const getChaptersList = async (studentId, courseId) => {
     const chapters = await courseRepository.getAllChapters(courseId);
-
-    return await Promise.all(chapters.map(async (chapter, index) => {
-        if (chapter.order_index === 1) return { ...chapter, is_locked: false };
-
-        const previousChapter = chapters[index - 1];
-
-        const assessmentResult = await courseRepository.getAssessmentResult(studentId, previousChapter.id);
-
-        const isLocked = !assessmentResult || assessmentResult.status !== 'passed';
-
-        return {
-            ...chapter,
-            is_locked: isLocked
-        };
-    }));
+    return chapters.map(chapter => ({ ...chapter, is_locked: false }));
 };
 
 const getLessonsList = async (studentId, courseId, chapterId) => {
     const lessons = await courseRepository.getLessonsByChapter(chapterId);
-    const enrollment = await courseRepository.getEnrollmentData(studentId, courseId);
-    const totalInCourse = await courseRepository.getTotalCourseLessons(courseId);
-
-    const currentProgress = enrollment?.progress_percentage || 0;
-    const lessonWeight = 100 / (totalInCourse || 1);
-
-    return lessons.map(lesson => {
-        const requiredProgress = (lesson.order_index - 1) * lessonWeight;
-
-        return {
-            ...lesson,
-            is_locked: lesson.order_index > 1 && currentProgress < (requiredProgress - 0.5)
-        };
-    });
+    return lessons.map(lesson => ({ ...lesson, is_locked: false }));
 };
 
 const getLessonContent = async (studentId, courseId, lessonId) => {

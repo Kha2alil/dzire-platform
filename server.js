@@ -35,6 +35,7 @@ const skills            = require('./src/routes/skillRoutes');
 const badgeRoutes       = require('./src/routes/badgeRoutes');
 const notificationRoutes = require('./src/routes/notificationRoutes');
 const faqRoutes         = require('./src/routes/faqRoutes');
+const teacherAnalyticsRoutes = require('./src/routes/teacherAnalyticsRoutes');
 const authMiddleware     = require('./src/middlewares/authMiddleware');
 const OnboardingController = require('./src/controllers/onboardingController');
 
@@ -47,6 +48,7 @@ app.use('/api/courses',       courseRoutes);
 app.use('/api/students',      studentRoutes);
 app.use('/api/onboarding',    onboardingRoutes);
 app.use('/api/admin',         adminRoutes);
+app.use('/api/teacher',       teacherAnalyticsRoutes);
 app.get('/api/subdomains',    authMiddleware, OnboardingController.getSubdomains);
 app.use('/api/skills',        skills);
 app.use('/api/badges',        badgeRoutes);
