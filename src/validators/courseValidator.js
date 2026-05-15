@@ -43,18 +43,22 @@ const createChapterSchema = Joi.object({
 
 const createLessonSchema = Joi.object({
     title: Joi.string().min(3).max(255).required(),
-    content_type: Joi.string().valid('video', 'pdf').required(),
+    content_type: Joi.string().valid('video', 'pdf', 'text').optional(),
     order_index: Joi.number().integer().min(0).optional(),
     duration: Joi.number().integer().min(1).optional(),
     is_free: Joi.boolean().default(false),
-    xp_reward: Joi.number().integer().min(0).default(0)
+    xp_reward: Joi.number().integer().min(0).default(0),
+    summary_text: Joi.string().optional().allow('')
 });
 
 const createAssessmentSchema = Joi.object({
     title: Joi.string().min(3).max(255).required(),
-    type: Joi.string().valid('quiz', 'final_exam').required(),
+    type: Joi.string().valid('quiz', 'final_exam', 'boss_exam').required(),
     passing_score: Joi.number().integer().min(1).max(100).required(),
-    lesson_id: Joi.string().uuid().optional(), // ✅ إضافة هذا السطر
+    xp_reward: Joi.number().integer().min(0).default(0),
+    lesson_id: Joi.string().uuid().optional(),
+
+    // Multiple‑choice questions (required for quiz/final_exam, optional for boss_exam)
     questions: Joi.array().items(
         Joi.object({
             question_text: Joi.string().required(),
@@ -65,7 +69,18 @@ const createAssessmentSchema = Joi.object({
             points: Joi.number().integer().min(1).default(1),
             order_index: Joi.number().integer().min(0).required()
         })
-    ).min(1).required()
+    ).optional(),
+
+    // Boss‑exam specific fields (all optional, used only when type = 'boss_exam')
+    description: Joi.string().optional(),
+    language: Joi.string().valid('javascript', 'html', 'css').optional(),
+    starter_code: Joi.string().optional().allow(''),
+    test_cases: Joi.array().items(
+        Joi.object({
+            input: Joi.string().allow('').required(),
+            expected: Joi.string().allow('').required()
+        })
+    ).optional()
 });
 
 const validateCreateCourse = (data) => {

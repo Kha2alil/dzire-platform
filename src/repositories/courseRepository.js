@@ -256,49 +256,42 @@ const deleteLesson = async (id) => {
 
 // repositories/courseRepository.js
 const createAssessment = async (chapterId, assessmentData, courseId, lessonId = null) => {
-    const { title, type, passing_score, questions } = assessmentData;
+    const { title, type, passing_score, questions, xp_reward, description, language, starter_code, test_cases } = assessmentData;
     const finalScore = passing_score || 50;
+    const xp = xp_reward || 0;
+    const testCasesJson = test_cases ? JSON.stringify(test_cases) : null;
 
-    // ✅ بناء الاستعلام ديناميكياً بناءً على وجود lessonId
     let query;
     let params;
     if (lessonId) {
         query = `
-            INSERT INTO assessments (course_id, chapter_id, lesson_id, title, type, passing_score)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO assessments (course_id, chapter_id, lesson_id, title, type, passing_score, xp_reward, description, language, starter_code, test_cases)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        params = [courseId, chapterId, lessonId, title, type, finalScore];
+        params = [courseId, chapterId, lessonId, title, type, finalScore, xp, description || null, language || null, starter_code || null, testCasesJson];
     } else {
         query = `
-            INSERT INTO assessments (course_id, chapter_id, title, type, passing_score)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO assessments (course_id, chapter_id, title, type, passing_score, xp_reward, description, language, starter_code, test_cases)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        params = [courseId, chapterId, title, type, finalScore];
+        params = [courseId, chapterId, title, type, finalScore, xp, description || null, language || null, starter_code || null, testCasesJson];
     }
     await db.query(query, params);
 
-    // جلب الـ ID الخاص بالتقييم المُنشأ
+    // Fetch the newly created assessment ID (unchanged logic)
     let idQuery;
     let idParams;
     if (lessonId) {
-        idQuery = `
-            SELECT id FROM assessments
-            WHERE course_id = ? AND chapter_id = ? AND lesson_id = ? AND title = ?
-            ORDER BY id DESC LIMIT 1
-        `;
+        idQuery = `SELECT id FROM assessments WHERE course_id = ? AND chapter_id = ? AND lesson_id = ? AND title = ? ORDER BY id DESC LIMIT 1`;
         idParams = [courseId, chapterId, lessonId, title];
     } else {
-        idQuery = `
-            SELECT id FROM assessments
-            WHERE course_id = ? AND chapter_id = ? AND title = ?
-            ORDER BY id DESC LIMIT 1
-        `;
+        idQuery = `SELECT id FROM assessments WHERE course_id = ? AND chapter_id = ? AND title = ? ORDER BY id DESC LIMIT 1`;
         idParams = [courseId, chapterId, title];
     }
     const [assRows] = await db.query(idQuery, idParams);
     const assessmentId = assRows[0].id;
 
-    // إضافة الأسئلة إن وُجدت (نفس الكود القديم)
+    // Add questions if provided
     if (questions && Array.isArray(questions) && questions.length > 0) {
         for (const q of questions) {
             await addQuestion(assessmentId, q);
@@ -307,18 +300,23 @@ const createAssessment = async (chapterId, assessmentData, courseId, lessonId = 
 
     return findAssessmentById(assessmentId);
 };
+
 const findAssessmentById = async (id) => {
     const [assRows] = await db.query('SELECT * FROM assessments WHERE id = ?', [id]);
     if (!assRows[0]) return null;
 
-    // جلب الأسئلة وتحويل الـ JSON إلى مصفوفة ليفهمها الـ Frontend
     const [questions] = await db.query(`SELECT * FROM questions WHERE assessment_id = ? ORDER BY order_index ASC`, [id]);
     const parsedQuestions = questions.map(q => ({
         ...q,
         options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options
     }));
 
-    return { ...assRows[0], questions: parsedQuestions };
+    const assessment = assRows[0];
+    if (assessment.test_cases && typeof assessment.test_cases === 'string') {
+        try { assessment.test_cases = JSON.parse(assessment.test_cases); } catch(e) { assessment.test_cases = []; }
+    }
+
+    return { ...assessment, questions: parsedQuestions };
 };
 
 // في ملف courseRepository.js - سطر 265 تقريباً
@@ -674,6 +672,7 @@ const findAssessmentByIds = async (assessmentId) => {
         SELECT 
             a.id, a.course_id, a.chapter_id, a.lesson_id,
             a.title, a.type, a.passing_score,
+            a.description, a.language, a.starter_code, a.test_cases,
             c.title AS chapter_title,
             l.title AS lesson_title
         FROM assessments a
@@ -682,9 +681,13 @@ const findAssessmentByIds = async (assessmentId) => {
         WHERE a.id = ?
     `;
     const [rows] = await db.query(query, [assessmentId]);
-    return rows[0];
+    if (!rows[0]) return null;
+    const assessment = rows[0];
+    if (assessment.test_cases && typeof assessment.test_cases === 'string') {
+        try { assessment.test_cases = JSON.parse(assessment.test_cases); } catch(e) { assessment.test_cases = []; }
+    }
+    return assessment;
 };
-
 /**
  * جلب جميع أسئلة تقييم معين (مرتبة حسب order_index)
  */

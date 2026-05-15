@@ -5,6 +5,7 @@ const gamificationRepository = require('../repositories/gamificationRepository')
 const { generateToken, verifyToken } = require('../utils/tokenGenerator');
 const { sendVerificationEmail } = require('./emailService');
 const { validateSignup, validateLogin, validateChangePassword } = require('../validators/authValidator'); // ✅ kept from feature/auth
+const db = require('../config/database');
 
 /**
  * تسجيل مستخدم جديد
@@ -40,7 +41,8 @@ const signup = async (userData) => {
     });
 
     await profileRepository.createProfile(user.id);
-    await gamificationRepository.createGamificationStats(user.id, user.role);
+    const defaultSubdomainId = await getDefaultSubdomainId();
+    await gamificationRepository.createGamificationStats(user.id, user.role, defaultSubdomainId);
     await sendVerificationEmail(user.email, user.full_name, verificationToken);
 
     return {
@@ -203,6 +205,12 @@ const changePassword = async (userId, data) => {
     return {
         message: 'تم تغيير كلمة المرور بنجاح / Password changed successfully'
     };
+};
+
+const getDefaultSubdomainId = async () => {
+    const [rows] = await db.query('SELECT id FROM subdomains LIMIT 1');
+    if (rows.length === 0) throw new Error('No subdomains found in the database');
+    return rows[0].id;
 };
 
 module.exports = {

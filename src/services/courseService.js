@@ -1,7 +1,8 @@
 const courseRepository = require('../repositories/courseRepository');
 const db = require('../config/database.js');
 const studentRepository = require('../repositories/studentRepository');
-
+const axios = require('axios');
+const studentService = require('./studentService');
 
 const {
     validateCreateCourse,
@@ -346,8 +347,8 @@ const updateAssessment = async (courseId, chapterId, assessmentId, teacherId, up
         throw error;
     }
 
-    if (updateData.type && !['quiz', 'final_exam'].includes(updateData.type)) {
-        const error = new Error('نوع الاختبار يجب أن يكون quiz أو final_exam');
+    if (updateData.type && !['quiz', 'final_exam', 'boss_exam'].includes(updateData.type)) {
+        const error = new Error('نوع الاختبار يجب أن يكون quiz أو final_exam أو boss_exam');
         error.statusCode = 400;
         throw error;
     }
@@ -801,6 +802,142 @@ const _gradeSubmission = (questions, studentAnswers) => {
     return parseFloat(scorePercent.toFixed(2));
 };
 
+const submitBossExam = async (studentId, assessmentId, code, language) => {
+    const assessment = await courseRepository.findAssessmentById(assessmentId);
+    if (!assessment || assessment.type !== 'boss_exam') {
+        throw { statusCode: 404, message: 'Boss exam not found' };
+    }
+
+    // 1. Run optional quick‑check test cases
+    const testCases = assessment.test_cases || [];
+    const quickResults = [];
+    let quickScore = 0;
+    if (testCases.length > 0) {
+        for (const tc of testCases) {
+            let passed = false;
+            if (language === 'html' || language === 'css') {
+                const expected = tc.expected || '';
+                passed = code.includes(expected);
+                quickResults.push({ input: tc.input, expected, actual: passed ? expected : 'NOT FOUND', passed });
+            } else {
+                try {
+                    const res = await axios.post('https://onecompiler.com/api/code/exec', {
+                        language: 'javascript',
+                        code: code,
+                        stdin: tc.input
+                    });
+                    const output = (res.data.stdout || res.data.output || '').trim();
+                    const expected = (tc.expected || '').trim();
+                    passed = output === expected;
+                    quickResults.push({ input: tc.input, expected, actual: output, passed });
+                } catch (e) {
+                    quickResults.push({ input: tc.input, expected: tc.expected, actual: 'Execution error', passed: false });
+                }
+            }
+        }
+        const passedQuick = quickResults.filter(r => r.passed).length;
+        quickScore = Math.round((passedQuick / testCases.length) * 100);
+    }
+
+    // 2. Fetch student's sub‑domain level
+    let studentLevel = 'beginner';
+    try {
+        const [placement] = await db.query(
+            'SELECT level FROM placement_results WHERE student_id = ? LIMIT 1',
+            [studentId]
+        );
+        if (placement.length > 0 && placement[0].level) {
+            studentLevel = placement[0].level.toLowerCase();
+        }
+    } catch (e) { /* use default */ }
+
+    // 3. Call AI for grading
+    let aiScore = 0;
+    let aiFeedback = '';
+    const aiService = require('./aiService');
+
+    const prompt = `You are a strict but fair code evaluator for a learning platform.
+The student is at the **${studentLevel}** level.
+Task description: "${assessment.description}".
+Student's code:
+\`\`\`${language}
+${code}
+\`\`\`
+
+Please return a JSON object with exactly two fields:
+- "score": a number between 0 and 100 that reflects how well the code satisfies the task description. Be more lenient for beginners (allow partial/imperfect solutions) and stricter for advanced students.
+- "feedback": a short, encouraging, and constructive message (max 150 words) explaining the score and suggesting improvements or praising good work.
+
+Return ONLY the JSON object, no other text.`;
+
+    try {
+        const aiResponse = await aiService.askAI(studentId, prompt);
+        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            aiScore = parsed.score || 0;
+            aiFeedback = parsed.feedback || '';
+        }
+    } catch (e) {
+        console.error('AI grading failed:', e);
+        aiFeedback = 'AI grading is currently unavailable. Please try again later.';
+    }
+
+    // 4. Combine scores
+    let finalScore;
+    if (testCases.length > 0) {
+        finalScore = Math.round(quickScore * 0.4 + aiScore * 0.6);
+    } else {
+        finalScore = aiScore;
+    }
+
+    const passed = finalScore >= (assessment.passing_score || 70);
+
+    // 5. Check if already passed BEFORE saving the new attempt
+    const alreadyPassed = await _hasAlreadyPassedAssessment(studentId, assessmentId);
+
+    // 6. Save the attempt
+    await db.query(
+        `INSERT INTO student_assessments (student_id, assessment_id, score, passed) VALUES (?, ?, ?, ?)`,
+        [studentId, assessmentId, finalScore, passed]
+    );
+
+    // 7. Award XP only on FIRST pass
+    let xpGained = 0;
+    console.log('XP debug: alreadyPassed =', alreadyPassed, ', xp_reward =', assessment.xp_reward, ', passed =', passed);
+    if (passed && !alreadyPassed && assessment.xp_reward > 0) {
+        xpGained = assessment.xp_reward;
+        console.log('Awarding XP:', xpGained);
+        const connection = await db.getConnection();
+        try {
+            await courseRepository.updateStudentXP(connection, studentId, xpGained);
+        } finally {
+            connection?.release();
+        }
+        const courseInfo = await courseRepository.findCourseById(assessment.course_id);
+        if (courseInfo?.subdomain_id) {
+            await studentService.updateStudentProgress(studentId, courseInfo.subdomain_id, xpGained);
+        }
+        const progressAggregator = require('./progressAggregator');
+        await progressAggregator.handleQuizPassed(studentId, assessmentId, finalScore, passed).catch(() => {});
+    } else {
+        console.log('XP NOT awarded. alreadyPassed:', alreadyPassed, ', xp_reward:', assessment.xp_reward, ', passed:', passed);
+    }
+
+    if (isNaN(finalScore) || finalScore === null || finalScore === undefined) {
+        finalScore = quickScore || 0;
+    }
+
+    // Return xp_gained (even if 0)
+    return {
+        results: quickResults,
+        score: finalScore,
+        passed,
+        xp_gained: xpGained,
+        ai_feedback: aiFeedback || null,
+    };
+};
+
 // ============================================================
 // ADDITIONAL FUNCTIONS (from dev branch)
 // ============================================================
@@ -816,6 +953,8 @@ const getLessonsByChapter = async (chapterId) => {
 const getCourseSubdomain = async (courseId) => {
     return await courseRepository.getCourseSubdomain(courseId);
 };
+
+
 
 
 
@@ -858,5 +997,6 @@ module.exports = {
     getStudentsStatsForTeacher,
     submitAssessment,
     getLessonsByChapter, 
-    getCourseSubdomain
+    getCourseSubdomain,
+    submitBossExam
 };
