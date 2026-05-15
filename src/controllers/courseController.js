@@ -598,6 +598,19 @@ const getCourseSubdomain = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+const submitBossExam = async (req, res, next) => {
+    try {
+        const { assessmentId } = req.params;
+        const { code, language } = req.body;
+        const studentId = req.user.id;
+        const result = await courseService.submitBossExam(studentId, assessmentId, code, language);
+        res.status(200).json({ success: true, ...result });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     createCourse,
     getTeacherCourses,
@@ -632,7 +645,7 @@ module.exports = {
     getMyCourses,
     getMyStudentCount,
     getTeacherDashboard,
-    
+    submitBossExam,
     getChapterLessons,
     getCourseSubdomain
 };

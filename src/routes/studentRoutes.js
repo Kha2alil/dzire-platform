@@ -4,6 +4,7 @@ const router  = express.Router();
 const studentController = require('../controllers/studentController');
 const authMiddleware    = require('../middlewares/authMiddleware');
 const roleMiddleware    = require('../middlewares/roleMiddleware');
+const studentService = require('../services/studentService');
 
 router.use(authMiddleware);
 
@@ -20,7 +21,7 @@ router.post('/enroll',
     studentController.enroll
 );
 router.get('/leaderboard', authMiddleware ,roleMiddleware('student') , studentController.getLeaderboardData);
-module.exports = router;
+
 router.post('/:studentId/update', authMiddleware, studentController.updateProgress);
 router.get(
     '/:courseId/assessments/:assessmentId',
@@ -35,3 +36,15 @@ router.get(
     roleMiddleware('student'),
     studentController.getAssessmentsByCourse
 );
+
+// GET /api/students/assessments/overview
+router.get('/assessments/overview', authMiddleware, roleMiddleware('student'), async (req, res, next) => {
+    try {
+        const data = await studentService.getAssessmentsOverview(req.user.id);
+        res.json({ success: true, data });
+    } catch (err) {
+        next(err);
+    }
+});
+
+module.exports = router;

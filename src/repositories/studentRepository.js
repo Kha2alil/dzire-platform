@@ -189,8 +189,37 @@ const getAssessmentsByCourse = async (courseId) => {
     );
     return rows;
 };
-// تأكد من إضافة getLeaderboard لـ module.exports
+
+const getStudentAssessmentsOverview = async (studentId) => {
+    const query = `
+        SELECT a.id, a.title, a.type, a.passing_score, a.lesson_id,
+               c.id AS course_id, c.title AS course_title,
+               COALESCE(l.order_index, 0) AS lesson_order,
+               e.last_completed_order,
+               COUNT(sa.id) AS attempts_count,
+               MAX(sa.score) AS best_score,
+               MAX(sa.passed) AS best_passed,
+               MAX(sa.attempted_at) AS last_attempted_at
+        FROM assessments a
+        JOIN courses c ON a.course_id = c.id
+        JOIN enrollments e ON e.course_id = c.id AND e.student_id = ?
+        LEFT JOIN lessons l ON a.lesson_id = l.id
+        LEFT JOIN student_assessments sa ON sa.assessment_id = a.id AND sa.student_id = ?
+        GROUP BY a.id
+        ORDER BY ISNULL(MAX(sa.attempted_at)), MAX(sa.attempted_at) DESC, c.title, a.title
+    `;
+    const [rows] = await db.query(query, [studentId, studentId]);
+    return rows;
+};
 
 
 
-module.exports = { searchStudents, enrollStudent, findEnrollment, getLeaderboard, getTopicCount, getCourseInfo, getSubdomainStats, updateSubdomainXP, upgradeSubdomainLevel, getGlobalStats, updateGlobalStats, getPlacementLevel, getSkillsBySubdomain, hasCompletedCourseForSkill, getAssessmentsByCourse };
+module.exports = { searchStudents,
+    enrollStudent,
+    findEnrollment,
+    getLeaderboard, getTopicCount,
+    getCourseInfo, getSubdomainStats,
+    updateSubdomainXP, upgradeSubdomainLevel,
+    getGlobalStats, updateGlobalStats,
+    getPlacementLevel, getSkillsBySubdomain, hasCompletedCourseForSkill,
+    getAssessmentsByCourse, getStudentAssessmentsOverview};
