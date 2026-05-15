@@ -4,20 +4,14 @@ const db = require('../config/database');
  * إنشاء سجل نقاط للطالب الجديد فقط
  * Create a gamification record for new students only
  */
-const createGamificationStats = async (userId, role) => {
-
-    // هذه الخاصية للطلاب فقط
-    // This feature is for students only
-    if (role !== 'student') {
-        return null;
-    }
+const createGamificationStats = async (userId, role, subdomainId) => {
+    if (role !== 'student') return null;
 
     const query = `
-        INSERT INTO gamification_stats (student_id)
-        VALUES (?)
+        INSERT INTO gamification_stats (student_id, subdomain_id)
+        VALUES (?, ?)
     `;
-
-    const [result] = await db.query(query, [userId]);
+    const [result] = await db.query(query, [userId, subdomainId]);
 
     return {
         id: result.insertId,
