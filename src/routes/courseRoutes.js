@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
-
 const courseController = require('../controllers/courseController');
 const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
 const { uploadThumbnail, uploadLessonContent, handleUploadError } = require('../middlewares/uploadMiddleware');
+const axios = require('axios');
 
 // ============================================================
 // كل الـ Routes تتطلب تسجيل دخول
@@ -168,6 +168,45 @@ router.post(
     courseController.submitAssessment
 );
 
+// Submit code for Boss Exam
+router.post(
+    '/assessments/:assessmentId/submit-code',
+    authMiddleware,
+    roleMiddleware('student'),
+    courseController.submitBossExam
+);
+
+// Run sample tests for boss exam (NEW)
+router.post('/assessments/:assessmentId/run-sample', authMiddleware, roleMiddleware('student'), async (req, res, next) => {
+    try {
+        const { code, language, test_cases } = req.body;
+        const results = [];
+
+        if (language === 'html' || language === 'css') {
+            for (const tc of test_cases) {
+                const passed = code.includes(tc.expected);
+                results.push({ input: tc.input, expected: tc.expected, actual: passed ? tc.expected : 'NOT FOUND', passed });
+            }
+        } else {
+            const ocLanguage = 'javascript';
+            for (const tc of test_cases) {
+                try {
+                    const ocRes = await axios.post('https://onecompiler.com/api/code/exec', {
+                        language: ocLanguage,
+                        code: code,
+                        stdin: tc.input
+                    });
+                    const output = (ocRes.data.stdout || ocRes.data.output || '').trim();
+                    results.push({ input: tc.input, expected: tc.expected, actual: output, passed: output === tc.expected });
+                } catch (e) {
+                    results.push({ input: tc.input, expected: tc.expected, actual: 'Error', passed: false });
+                }
+            }
+        }
+
+        res.json({ success: true, results });
+    } catch (err) { next(err); }
+});
 
 // 1. جلب قائمة الفصول لكورس معين (مع حالة القفل)
 router.get('/:courseId/chapters', roleMiddleware('student'), courseController.getChapters);
@@ -192,12 +231,6 @@ router.post('/complete-lesson', roleMiddleware('student'), courseController.fini
 
 // 5. جلب نسبة تقدم الطالب الحالية في الكورس
 router.get('/:courseId/progress', roleMiddleware('student'), courseController.getProgress);
-
-// مسار الكورسات المتاحة للجميع (Explore)
-// تأكد من استيراد roleMiddleware و authMiddleware
-
-// جلب جميع التقييمات الخاصة بكورس (للمعلم أو المدير)
-
 
 router.get(
     '/chapters/:chapterId/lessons',

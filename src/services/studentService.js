@@ -1,19 +1,17 @@
 const studentRepository = require('../repositories/studentRepository');
 const courseRepository = require('../repositories/courseRepository');
+
 /**
  * البحث عن طلاب الأستاذ
  * Search teacher's students
  */
 const searchStudents = async (teacherId, filters) => {
-
-    // تحقق أن فلتر واحد على الأقل موجود
     if (!filters.name && !filters.level) {
         const error = new Error('يجب إرسال name أو level للبحث');
         error.statusCode = 400;
         throw error;
     }
 
-    // تحقق من صحة المستوى إذا أُرسل
     if (filters.level && isNaN(filters.level)) {
         const error = new Error('المستوى يجب أن يكون رقماً');
         error.statusCode = 400;
@@ -24,24 +22,16 @@ const searchStudents = async (teacherId, filters) => {
 };
 
 const enrollInCourse = async (studentId, courseId) => {
-    // 1. التحقق من وجود تسجيل مسبق في نفس الكورس
     const existingEnrollment = await studentRepository.findEnrollment(studentId, courseId);
     if (existingEnrollment) {
         throw new Error('You are already enrolled in this course');
     }
 
-    // 2. جلب معلومات الكورس (subdomain_id, difficulty_level)
     const courseInfo = await studentRepository.getCourseInfo(courseId);
     if (!courseInfo) {
         throw new Error('Course not found');
     }
-    const { subdomain_id, difficulty_level } = courseInfo;
 
-    // 3. التحقق من وجود تسجيل في أي كورس آخر له نفس المجال الفرعي ونفس المستوى
-
-
-
-    // 4. التسجيل
     return await studentRepository.enrollStudent(studentId, courseId);
 };
 
@@ -54,18 +44,30 @@ const fetchLeaderboard = async () => {
         xp: student.XP || 0,
         avatar: student.Image || 'default-avatar.png',
         specialization: student.Specialization || 'General Student',
-        // تمييز الثلاثة الأوائل
         medal: index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? 'bronze' : null
     }));
 };
+
 const XP_PER_TOPIC = 100;
-const GENERAL_LEVEL_THRESHOLDS = [0, 100, 300, 600, 1000, 1500, 2100, 2800, 3600, 4500];
+
+// ── New 30‑level thresholds (syncs with front‑end) ──
+const GENERAL_LEVEL_THRESHOLDS = [
+    0, 100, 220, 364, 537, 744, 993, 1292, 1650, 2080,
+    2596, 3215, 3958, 4850, 5920, 7204, 8745, 10594,
+    12813, 15476, 18671, 22505, 27106, 32627, 39252,
+    47202, 56742, 68190, 81928, 98314
+];
 
 const updateStudentProgress = async (studentId, subdomainId, xpGained, targetXPOverride = null) => {
     // 1. الحصول على سجل الـ subdomain للطالب
     let stats = await studentRepository.getSubdomainStats(studentId, subdomainId);
     if (!stats) {
-        throw new Error(`No gamification stats found for student ${studentId} in subdomain ${subdomainId}`);
+        // إذا لم يتم العثور على صف في هذا المجال الفرعي، قم بإنشائه
+        await studentRepository.createGamificationStatsForSubdomain(studentId, subdomainId);
+        stats = await studentRepository.getSubdomainStats(studentId, subdomainId);
+        if (!stats) {
+            throw new Error(`Could not create gamification stats for student ${studentId} in subdomain ${subdomainId}`);
+        }
     }
 
     let { accumulated_xp, new_level, current_level } = stats;
@@ -79,17 +81,11 @@ const updateStudentProgress = async (studentId, subdomainId, xpGained, targetXPO
     let levelUpgraded = false;
     let updatedLevelStr = currentLevelStr;
 
-    // لا نرقى إذا كنا بالفعل Advanced
     if (currentLevelStr !== 'Advanced') {
-        // جلب كل المهارات في هذا الـ subdomain
         const skills = await studentRepository.getSkillsBySubdomain(subdomainId);
-        if (skills.length === 0) {
-            // لا توجد مهارات محددة – قد لا نرقى أو نترك الأمر لك
-            // هنا نعتبر أنه لا يمكن الترقية بدون مهارات
-        } else {
+        if (skills.length > 0) {
             let allSkillsHaveCompletedCourse = true;
-            // تحديد مستوى الكورس المطلوب (نفس المستوى الحالي)
-            const requiredDifficulty = currentLevelStr.toLowerCase(); // 'beginner' أو 'intermediate'
+            const requiredDifficulty = currentLevelStr.toLowerCase();
             for (const skillId of skills) {
                 const completed = await studentRepository.hasCompletedCourseForSkill(
                     studentId, skillId, requiredDifficulty
@@ -100,7 +96,6 @@ const updateStudentProgress = async (studentId, subdomainId, xpGained, targetXPO
                 }
             }
             if (allSkillsHaveCompletedCourse) {
-                // ترقية المستوى
                 if (currentLevelStr === 'Beginner') {
                     updatedLevelStr = 'Intermediate';
                     levelUpgraded = true;
@@ -109,23 +104,19 @@ const updateStudentProgress = async (studentId, subdomainId, xpGained, targetXPO
                     levelUpgraded = true;
                 }
                 if (levelUpgraded) {
-                    // تحديث new_level وإعادة ضبط accumulated_xp (اختياري)
                     await studentRepository.upgradeSubdomainLevel(studentId, subdomainId, updatedLevelStr);
                 }
             }
         }
     }
 
-    // 4. تحديث المستوى العام (إذا كنت لا تزال تريد total_xp)
-    // هنا يمكنك الاحتفاظ بـ total_xp منفصلاً (مثلاً في سجل global أو في كل صف)
-    // لكن بالحد الأدنى، إذا أردت الاحتفاظ بـ total_xp، فسأتركها كما هي
-    // إذا لم تكن تريدها، احذف هذا الجزء.
+    // 4. تحديث المستوى العام (30‑level scale)
     let globalStats = await studentRepository.getGlobalStats(studentId);
-    oldTotalXP = globalStats.total_xp;
-    oldGeneralLevel = globalStats.current_level;
+    let oldTotalXP = 0;
+    let oldGeneralLevel = 1;
+
     if (!globalStats) {
-        // إنشاء سجل أولي باستخدام subdomainId الحالي
-        await studentRepository.createGamificationStats(studentId, subdomainId);
+        await studentRepository.createGamificationStatsForSubdomain(studentId, subdomainId);
         oldTotalXP = 0;
         oldGeneralLevel = 1;
     } else {
@@ -134,7 +125,9 @@ const updateStudentProgress = async (studentId, subdomainId, xpGained, targetXPO
     }
 
     const newTotalXP = oldTotalXP + xpGained;
-    let newGeneralLevel = oldGeneralLevel;
+
+    // حساب المستوى العام الجديد باستخدام قائمة الـ 30 مستوى
+    let newGeneralLevel = 1;
     for (let i = GENERAL_LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
         if (newTotalXP >= GENERAL_LEVEL_THRESHOLDS[i]) {
             newGeneralLevel = i + 1;
@@ -149,8 +142,11 @@ const updateStudentProgress = async (studentId, subdomainId, xpGained, targetXPO
         success: true,
         levelUpgraded,
         newLevel: updatedLevelStr,
-        currentXP: newAccumulatedXP,   // XP المتراكم (قد لا تستخدمه بعد الآن)
-        message: levelUpgraded ? `Level upgraded to ${updatedLevelStr}` : 'Level unchanged'
+        currentXP: newAccumulatedXP,
+        message: levelUpgraded ? `Level upgraded to ${updatedLevelStr}` : 'Level unchanged',
+        globalLevel: newGeneralLevel,
+        globalLevelUpgraded: generalLevelUpgraded,
+        totalXP: newTotalXP
     };
 };
 
@@ -164,8 +160,8 @@ function calculateGlobalLevel(totalXP) {
     }
     return level;
 }
+
 const getAssessmentWithQuestions = async (assessmentId) => {
-    // 1. جلب بيانات التقييم
     const assessment = await courseRepository.findAssessmentByIds(assessmentId);
     if (!assessment) {
         const error = new Error('Assessment not found');
@@ -173,10 +169,8 @@ const getAssessmentWithQuestions = async (assessmentId) => {
         throw error;
     }
 
-    // 2. جلب الأسئلة المرتبطة
     const questions = await courseRepository.findQuestionsByAssessmentIds(assessmentId);
 
-    // 3. إرجاع الكائن المدمج
     return {
         ...assessment,
         questions
@@ -187,6 +181,36 @@ const getAssessmentsByCourse = async (courseId) => {
     return await studentRepository.getAssessmentsByCourse(courseId);
 };
 
+const getAssessmentsOverview = async (studentId) => {
+    const rows = await studentRepository.getStudentAssessmentsOverview(studentId);
+    return rows.map(row => {
+        const hasAttempt = row.last_attempted_at !== null;
+        let status;
+        if (hasAttempt) {
+            status = row.best_passed ? 'Passed' : 'Attempted';
+        } else {
+            const lessonOrder = Number(row.lesson_order) || 0;
+            const lastCompleted = Number(row.last_completed_order) || 0;
+            if (lessonOrder > 0 && lessonOrder > lastCompleted + 1) {
+                status = 'Locked';
+            } else {
+                status = 'Upcoming';
+            }
+        }
+        return {
+            id: row.id, title: row.title, type: row.type, passing_score: row.passing_score,
+            course_id: row.course_id, course_title: row.course_title, status, best_score: row.best_score,
+            last_attempted_at: row.last_attempted_at, attempts_count: row.attempts_count,
+        };
+    });
+};
 
-
-module.exports = { searchStudents, enrollInCourse, fetchLeaderboard, updateStudentProgress, getAssessmentWithQuestions, getAssessmentsByCourse };
+module.exports = {
+    searchStudents,
+    enrollInCourse,
+    fetchLeaderboard,
+    updateStudentProgress,
+    getAssessmentWithQuestions,
+    getAssessmentsByCourse,
+    getAssessmentsOverview
+};
