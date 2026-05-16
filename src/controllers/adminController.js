@@ -127,5 +127,63 @@ const destroyCourse = async (req, res, next) => {
         res.status(200).json({ success: true, ...response });
     } catch (error) { next(error); }
 };
+const getAllSkills = async (req, res, next) => {
+    try {
+        const skills = await adminService.getAllSkills();
+        res.status(200).json({ success: true, data: skills });
+    } catch (error) {
+        next(error);
+    }
+};
 
-module.exports = { getProfiles, addProfile, editUserPermissions, banUser, deleteUser, listCourses, editCourseStatus, destroyCourse };
+// GET /api/admin/skills/:skillId
+const getSkillById = async (req, res, next) => {
+    try {
+        const { skillId } = req.params;
+        const skill = await adminService.getSkillById(skillId);
+        res.status(200).json({ success: true, data: skill });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const createSkill = async (req, res, next) => {
+    try {
+        console.log("📥 Received skill data:", req.body);
+        const skillData = req.body;
+        if (!skillData.code || !skillData.name) {
+            return res.status(400).json({ success: false, message: 'code and name are required' });
+        }
+        const newSkill = await adminService.createSkill(skillData);
+        res.status(201).json({ success: true, data: newSkill });
+    } catch (error) {
+        console.error("❌ Error in createSkill:", error);
+        res.status(500).json({ success: false, message: error.message, message_en: error.message });
+    }
+};
+
+// PUT /api/admin/skills/:skillId
+const updateSkill = async (req, res, next) => {
+    try {
+        const { skillId } = req.params;
+        const skillData = req.body;
+        const updated = await adminService.updateSkill(skillId, skillData);
+        res.status(200).json({ success: true, data: updated });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// DELETE /api/admin/skills/:skillId
+const deleteSkill = async (req, res, next) => {
+    try {
+        const { skillId } = req.params;
+        const result = await adminService.deleteSkill(skillId);
+        res.status(200).json({ success: true, message: result.message });
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+module.exports = { getProfiles, addProfile, editUserPermissions, banUser, deleteUser, listCourses, editCourseStatus, destroyCourse , getAllSkills, getSkillById, createSkill, updateSkill, deleteSkill };

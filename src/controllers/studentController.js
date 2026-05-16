@@ -78,17 +78,21 @@ const updateProgress = async (req, res) => {
         res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 };
+// controllers/courseController.js (أو studentController.js)
+
 const getAssessmentById = async (req, res, next) => {
     try {
-        const { assessmentId } = req.params;
-        const assessment = await studentService.getAssessmentWithQuestions(assessmentId);
+        const { assessmentId } = req.params; // قد يكون courseId غير مطلوب
+        const studentId = req.user.id;
+
+        const assessment = await studentService.getAssessmentWithQuestions(studentId, assessmentId);
+
         res.status(200).json({
             success: true,
             data: assessment
         });
     } catch (error) {
-        console.error('Error in getAssessmentById:', error); // سيعرض تفاصيل الخطأ في الـ terminal
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 };
 const getAssessmentsByCourse = async (req, res) => {
