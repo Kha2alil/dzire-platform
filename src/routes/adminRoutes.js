@@ -41,5 +41,10 @@ router.patch('/courses/:id/status', authMiddleware, roleMiddleware('admin'), adm
 // حذف كورس
 router.delete('/courses/:id', authMiddleware, roleMiddleware('admin'), adminController.destroyCourse);
 // تعديل بيانات مستخدم (زر Edit)
+router.post('/skills', authMiddleware, roleMiddleware('admin'), adminController.createSkill);
+router.get('/skills', authMiddleware, roleMiddleware('admin'), adminController.getAllSkills);
+router.get('/skills/:skillId', authMiddleware, roleMiddleware('admin'), adminController.getSkillById);
+router.put('/skills/:skillId', authMiddleware, roleMiddleware('admin'), adminController.updateSkill);
+router.delete('/skills/:skillId', authMiddleware, roleMiddleware('admin'), adminController.deleteSkill);
 
 module.exports = router;

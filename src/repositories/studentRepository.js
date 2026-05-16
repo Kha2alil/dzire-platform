@@ -211,8 +211,7 @@ const getStudentAssessmentsOverview = async (studentId) => {
     const [rows] = await db.query(query, [studentId, studentId]);
     return rows;
 };
-
-
+// التحقق مما إذا كان الطالب قد اجتاز هذا التقييم سابقاً
 
 module.exports = { searchStudents,
     enrollStudent,
@@ -222,4 +221,5 @@ module.exports = { searchStudents,
     updateSubdomainXP, upgradeSubdomainLevel,
     getGlobalStats, updateGlobalStats,
     getPlacementLevel, getSkillsBySubdomain, hasCompletedCourseForSkill,
-    getAssessmentsByCourse, getStudentAssessmentsOverview};
+    getAssessmentsByCourse, getStudentAssessmentsOverview
+    };
