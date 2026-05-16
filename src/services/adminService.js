@@ -90,6 +90,63 @@ const removeCourse = async (courseId) => {
     return { message: "تم حذف الكورس نهائياً من النظام" };
 };
 // أضف deleteUserService إلى module.exports في الـ Service
+const getAllSkills = async () => {
+    return await adminRepository.getAllSkills();
+};
 
+// جلب مهارة واحدة
+const getSkillById = async (skillId) => {
+    const skill = await adminRepository.getSkillById(skillId);
+    if (!skill) {
+        const error = new Error('Skill not found');
+        error.statusCode = 404;
+        throw error;
+    }
+    return skill;
+};
 
-module.exports = { fetchAllUsers, createAccount, updateUserRoleAndStatus, banUserService, deleteUserService, fetchAllCourses, changeCourseStatus, removeCourse };
+// إنشاء مهارة جديدة
+const createSkill = async (skillData) => {
+    // تحقق من وجود code فريد
+    const existing = await adminRepository.getSkillByCode(skillData.code);
+    if (existing) {
+        const error = new Error(`Skill with code "${skillData.code}" already exists`);
+        error.statusCode = 400;
+        throw error;
+    }
+    return await adminRepository.createSkill(skillData);
+};
+
+// تحديث مهارة
+const updateSkill = async (skillId, skillData) => {
+    const skill = await adminRepository.getSkillById(skillId);
+    if (!skill) {
+        const error = new Error('Skill not found');
+        error.statusCode = 404;
+        throw error;
+    }
+    // إذا تم تغيير الكود، تحقق من عدم وجود تكرار (مع استثناء نفس id)
+    if (skillData.code && skillData.code !== skill.code) {
+        const existing = await adminRepository.getSkillByCode(skillData.code);
+        if (existing && existing.id !== skillId) {
+            const error = new Error(`Skill with code "${skillData.code}" already exists`);
+            error.statusCode = 400;
+            throw error;
+        }
+    }
+    return await adminRepository.updateSkill(skillId, skillData);
+};
+
+// حذف مهارة
+const deleteSkill = async (skillId) => {
+    const skill = await adminRepository.getSkillById(skillId);
+    if (!skill) {
+        const error = new Error('Skill not found');
+        error.statusCode = 404;
+        throw error;
+    }
+    await adminRepository.deleteSkill(skillId);
+    return { message: 'Skill deleted successfully' };
+};
+
+module.exports = { fetchAllUsers, createAccount, updateUserRoleAndStatus, banUserService, deleteUserService, fetchAllCourses, changeCourseStatus, removeCourse , getAllSkills, getSkillById, createSkill, updateSkill, deleteSkill };

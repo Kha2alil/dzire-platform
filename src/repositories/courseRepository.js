@@ -790,6 +790,37 @@ const getStudentsByAssessment = async (assessmentId, teacherId) => {
     return rows;
 };
 
+const hasStudentPassedAssessment = async (studentId, assessmentId) => {
+    try {
+        const [rows] = await db.query(
+            `SELECT passed FROM student_assessments 
+             WHERE student_id = ? AND assessment_id = ? 
+             ORDER BY attempted_at DESC LIMIT 1`,
+            [studentId, assessmentId]
+        );
+        return rows.length > 0 && rows[0].passed === 1;
+    } catch (error) {
+        console.error("Error in hasStudentPassedAssessment:", error);
+        return false; // في حالة الخطأ، نعتبر أنه لم يجتز (لن يمنع المحاولة)
+    }
+};
+
+const getStudentAssessmentStatus = async (studentId, assessmentId) => {
+    const [rows] = await db.query(
+        `SELECT passed, score FROM student_assessments 
+         WHERE student_id = ? AND assessment_id = ? 
+         ORDER BY attempted_at DESC LIMIT 1`,
+        [studentId, assessmentId]
+    );
+    if (rows.length === 0) {
+        return { has_attempted: false, last_passed: false, last_score: null };
+    }
+    return {
+        has_attempted: true,
+        last_passed: rows[0].passed === 1,
+        last_score: rows[0].score
+    };
+};
 // لا تنسَ إضافتهم في module.exports في نهاية الملف
 module.exports = {
     createCourse, findCourseById, findCoursesByTeacher, updateCourse, updateCourseThumbnail, deleteCourse,
@@ -800,5 +831,5 @@ module.exports = {
     getAllChapters, getAssessmentResult, getLessonsByChapter, getLessonById, getTotalCourseLessons,
     getEnrollmentData, getRawContentsByLesson, updateStudentXP, updateEnrollmentProgress, checkLessonBelongsToChapter, findAvailableCourses, findEnrolledCoursesByStudent,
     getTeacherStudentCount, getStudentProgressInCourses, findAssessmentByIds, findQuestionsByAssessmentIds, getCourseSubdomain, getTeacherAssessments, getTeacherFailurePoints, getStudentsByAssessment
-    
+    ,hasStudentPassedAssessment , getStudentAssessmentStatus
 };

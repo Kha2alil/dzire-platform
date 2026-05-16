@@ -161,20 +161,40 @@ function calculateGlobalLevel(totalXP) {
     return level;
 }
 
-const getAssessmentWithQuestions = async (assessmentId) => {
-    const assessment = await courseRepository.findAssessmentByIds(assessmentId);
-    if (!assessment) {
-        const error = new Error('Assessment not found');
-        error.statusCode = 404;
+// services/courseService.js
+
+const getAssessmentWithQuestions = async (studentId, assessmentId) => {
+    console.log("🔍 getAssessmentWithQuestions called with:", { studentId, assessmentId });
+    try {
+        const assessment = await courseRepository.findAssessmentById(assessmentId);
+        if (!assessment) {
+            console.log("❌ Assessment not found");
+            throw new Error('Assessment not found');
+        }
+        const questions = await courseRepository.findQuestionsByAssessmentId(assessmentId);
+        console.log(`✅ Found ${questions.length} questions`);
+        
+        // تحقق من وجود hasStudentPassedAssessment
+        let alreadyPassed = false;
+        try {
+            alreadyPassed = await courseRepository.hasStudentPassedAssessment(studentId, assessmentId);
+            console.log(`✅ alreadyPassed = ${alreadyPassed}`);
+        } catch (err) {
+            console.error("❌ Error in hasStudentPassedAssessment:", err.message);
+        }
+         const status = await courseRepository.getStudentAssessmentStatus(studentId, assessmentId);
+        
+         return {
+        ...assessment,
+        questions,
+        has_attempted: status.has_attempted,
+        already_passed: status.last_passed,   // للحفاظ على التوافق مع الـ Frontend القديم
+        last_score: status.last_score
+    };
+    } catch (error) {
+        console.error("❌ ERROR in getAssessmentWithQuestions:", error);
         throw error;
     }
-
-    const questions = await courseRepository.findQuestionsByAssessmentIds(assessmentId);
-
-    return {
-        ...assessment,
-        questions
-    };
 };
 
 const getAssessmentsByCourse = async (courseId) => {
