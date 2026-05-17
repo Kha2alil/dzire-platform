@@ -133,7 +133,9 @@ const getUserSkillProgress = async (studentId, skillId) => {
 const getUserGlobalStats = async (studentId) => {
     const [rows] = await db.query(
         `SELECT total_xp, total_lessons_completed, total_courses_completed,
-                total_quizzes_passed, perfect_quiz_count
+                total_quizzes_passed, perfect_quiz_count,
+                skills_unlocked_count, high_score_quizzes,
+                final_exams_passed, has_intermediate_skill, has_advanced_skill
          FROM gamification_stats WHERE student_id = ?`,
         [studentId]
     );
@@ -200,20 +202,26 @@ const markAdvancedSkill = async (studentId) => {
     );
 };
 
-// Add these to the module.exports object
-module.exports = {
-    // ...existing exports...
-    incrementSkillsUnlockedCount,
-    incrementHighScoreQuizzes,
-    incrementFinalExamsPassed,
-    markIntermediateSkill,
-    markAdvancedSkill
+const incrementPerfectQuizCount = async (studentId) => {
+    await db.query(
+        `UPDATE gamification_stats
+         SET perfect_quiz_count = perfect_quiz_count + 1
+         WHERE student_id = ?`,
+        [studentId]
+    );
 };
+
 
 module.exports = {
     updateLessonProgress,
     updateCourseProgress,
     updateQuizProgress,
     getUserSkillProgress,
-    getUserGlobalStats
+    getUserGlobalStats,
+    incrementSkillsUnlockedCount,
+    incrementHighScoreQuizzes,
+    incrementFinalExamsPassed,
+    markIntermediateSkill,
+    markAdvancedSkill,
+    incrementPerfectQuizCount
 };

@@ -1,4 +1,5 @@
 const skillRepository = require('../repositories/skillRepository');
+const badgeService = require('./badgeService');
 
 /**
  * Get all skills (system-defined)

@@ -540,9 +540,9 @@ const updateStudentXP = async (executor, studentId, xpAmount) => {
 
     await executor.query(query, [xpAmount, xpAmount, studentId]);
 };
+
 // ب. تحديث نسبة التقدم في جدول enrollments
 const updateEnrollmentProgress = async (executor, studentId, courseId, lessonOrderIndex) => {
-    // 1. حساب عدد الدروس الكلي للحفاظ على دقة النسبة المئوية
     const [rows] = await executor.query(
         "SELECT COUNT(*) as total FROM lessons WHERE course_id = ?",
         [courseId]
@@ -550,8 +550,6 @@ const updateEnrollmentProgress = async (executor, studentId, courseId, lessonOrd
     const totalLessons = rows[0].total || 1;
     const progressStep = 100 / totalLessons;
 
-    // 2. التحديث الجوهري:
-    // نحدث النسبة المئوية و "آخر درس مكتمل" بشرط أن يكون الدرس الحالي أبعد مما وصل إليه الطالب سابقاً
     const updateQuery = `
         UPDATE enrollments 
         SET 
@@ -560,15 +558,23 @@ const updateEnrollmentProgress = async (executor, studentId, courseId, lessonOrd
         WHERE student_id = ? 
           AND course_id = ? 
           AND last_completed_order < ?`;
-    // الشرط الأخير هو السر: لا تلمس قاعدة البيانات إذا كان الدرس قديماً
 
     const [result] = await executor.query(updateQuery, [
-        lessonOrderIndex, progressStep, // لحساب النسبة بناءً على الترتيب الحالي
-        lessonOrderIndex,               // لتحديث آخر درس مكتمل
+        lessonOrderIndex, progressStep,
+        lessonOrderIndex,
         studentId,
         courseId,
-        lessonOrderIndex                // المقارنة مع الترتيب الحالي
+        lessonOrderIndex
     ]);
+
+    console.log('🔧 updateEnrollmentProgress:', {
+        lessonOrderIndex,
+        totalLessons,
+        progressStep,
+        affectedRows: result.affectedRows,
+        studentId,
+        courseId
+    });
 
     return result.affectedRows > 0;
 };

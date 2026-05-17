@@ -98,6 +98,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .tab:hover{color:var(--text3)}
 .tab.on{color:var(--b400);border-bottom-color:var(--b500)}
 
+/* ── P2/P3 Content ── */
+.p2-content{display:flex;flex-direction:column;height:100%}
+.p3-content-hidden{display:none;flex-direction:column;height:100%}
+
 .p2-body{flex:1;overflow-y:auto;padding:14px}
 .sec-title{font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text4);margin-bottom:7px;margin-top:14px}
 .sec-title:first-child{margin-top:0}
@@ -198,7 +202,7 @@ pre{padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12px;lin
       <div class="coll-hdr" onclick="toggleColl(this)">
         <span class="coll-arr o">▶</span>
         <span>🔐</span>
-        <span class="coll-lbl">Auth</span>
+        <span class="coll-lbl">Auth (5)</span>
       </div>
       <div class="coll-items o">
         <div class="t-item" onclick="load('signup')" data-key="signup"><span class="mb POST">POST</span><span class="t-name">auth/signup</span></div>
@@ -213,7 +217,7 @@ pre{padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12px;lin
       <div class="coll-hdr" onclick="toggleColl(this)">
         <span class="coll-arr o">▶</span>
         <span>👤</span>
-        <span class="coll-lbl">Profile</span>
+        <span class="coll-lbl">Profile (3)</span>
       </div>
       <div class="coll-items o">
         <div class="t-item" onclick="load('getProfile')" data-key="getProfile"><span class="mb GET">GET</span><span class="t-name">profile/me</span><span class="lock-sm">🔒</span></div>
@@ -226,7 +230,7 @@ pre{padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12px;lin
       <div class="coll-hdr" onclick="toggleColl(this)">
         <span class="coll-arr o">▶</span>
         <span>⚡</span>
-        <span class="coll-lbl">Gamification</span>
+        <span class="coll-lbl">Gamification (2)</span>
       </div>
       <div class="coll-items o">
         <div class="t-item" onclick="load('getStats')" data-key="getStats"><span class="mb GET">GET</span><span class="t-name">gamification/me</span><span class="lock-sm">🔒🎓</span></div>
@@ -238,7 +242,7 @@ pre{padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12px;lin
       <div class="coll-hdr" onclick="toggleColl(this)">
         <span class="coll-arr o">▶</span>
         <span>🎓</span>
-        <span class="coll-lbl">Onboarding</span>
+        <span class="coll-lbl">Onboarding (6)</span>
       </div>
       <div class="coll-items o">
         <div class="t-item" onclick="load('onboardingStatus')" data-key="onboardingStatus"><span class="mb GET">GET</span><span class="t-name">onboarding/status</span><span class="lock-sm">🔒🎓</span></div>
@@ -254,7 +258,7 @@ pre{padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12px;lin
       <div class="coll-hdr" onclick="toggleColl(this)">
         <span class="coll-arr o">▶</span>
         <span>📚</span>
-        <span class="coll-lbl">Courses (Teacher)</span>
+        <span class="coll-lbl">Courses (Teacher) (23)</span>
       </div>
       <div class="coll-items o">
         <div class="t-item" onclick="load('courseSearch')" data-key="courseSearch"><span class="mb GET">GET</span><span class="t-name">courses/search</span><span class="lock-sm">🔒👨‍🏫</span></div>
@@ -287,7 +291,7 @@ pre{padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12px;lin
       <div class="coll-hdr" onclick="toggleColl(this)">
         <span class="coll-arr o">▶</span>
         <span>🎧</span>
-        <span class="coll-lbl">Student Learning</span>
+        <span class="coll-lbl">Student Learning (10)</span>
       </div>
       <div class="coll-items o">
         <div class="t-item" onclick="load('availableCourses')" data-key="availableCourses"><span class="mb GET">GET</span><span class="t-name">courses/available</span><span class="lock-sm">🔒🎓</span></div>
@@ -297,7 +301,9 @@ pre{padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12px;lin
         <div class="t-item" onclick="load('studentLessonDetail')" data-key="studentLessonDetail"><span class="mb GET">GET</span><span class="t-name">courses/:id/lessons/:lid</span><span class="lock-sm">🔒🎓</span></div>
         <div class="t-item" onclick="load('finishLesson')" data-key="finishLesson"><span class="mb POST">POST</span><span class="t-name">courses/complete-lesson</span><span class="lock-sm">🔒🎓</span></div>
         <div class="t-item" onclick="load('studentProgress')" data-key="studentProgress"><span class="mb GET">GET</span><span class="t-name">courses/:id/progress</span><span class="lock-sm">🔒🎓</span></div>
+        <div class="t-item" onclick="load('courseSubdomain')" data-key="courseSubdomain"><span class="mb GET">GET</span><span class="t-name">courses/:id/subdomain</span><span class="lock-sm">🔒🎓</span></div>
         <div class="t-item" onclick="load('enroll')" data-key="enroll"><span class="mb POST">POST</span><span class="t-name">students/enroll</span><span class="lock-sm">🔒🎓</span></div>
+        <div class="t-item" onclick="load('studentUpdateProgress')" data-key="studentUpdateProgress"><span class="mb POST">POST</span><span class="t-name">students/:id/update</span><span class="lock-sm">🔒</span></div>
       </div>
     </div>
     <!-- Admin -->
@@ -305,7 +311,7 @@ pre{padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12px;lin
       <div class="coll-hdr" onclick="toggleColl(this)">
         <span class="coll-arr o">▶</span>
         <span>🛡️</span>
-        <span class="coll-lbl">Admin</span>
+        <span class="coll-lbl">Admin (8)</span>
       </div>
       <div class="coll-items o">
         <div class="t-item" onclick="load('adminProfiles')" data-key="adminProfiles"><span class="mb GET">GET</span><span class="t-name">admin/profiles</span><span class="lock-sm">🔒👑</span></div>
@@ -323,7 +329,7 @@ pre{padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12px;lin
       <div class="coll-hdr" onclick="toggleColl(this)">
         <span class="coll-arr o">▶</span>
         <span>🔔</span>
-        <span class="coll-lbl">Notifications</span>
+        <span class="coll-lbl">Notifications (4)</span>
       </div>
       <div class="coll-items o">
         <div class="t-item" onclick="load('notificationsGet')" data-key="notificationsGet"><span class="mb GET">GET</span><span class="t-name">notifications/</span><span class="lock-sm">🔒</span></div>
@@ -337,10 +343,85 @@ pre{padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12px;lin
       <div class="coll-hdr" onclick="toggleColl(this)">
         <span class="coll-arr o">▶</span>
         <span>🔍</span>
-        <span class="coll-lbl">Teacher Tools</span>
+        <span class="coll-lbl">Teacher Tools (2)</span>
       </div>
       <div class="coll-items o">
         <div class="t-item" onclick="load('studentSearch')" data-key="studentSearch"><span class="mb GET">GET</span><span class="t-name">students/search</span><span class="lock-sm">🔒👨‍🏫</span></div>
+        <div class="t-item" onclick="load('teacherChapterLessons')" data-key="teacherChapterLessons"><span class="mb GET">GET</span><span class="t-name">courses/chapters/:cid/lessons</span><span class="lock-sm">🔒👨‍🏫</span></div>
+      </div>
+    </div>
+    <!-- Student Assessments -->
+    <div class="tree-collection">
+      <div class="coll-hdr" onclick="toggleColl(this)">
+        <span class="coll-arr o">▶</span>
+        <span>🧪</span>
+        <span class="coll-lbl">Student Assessments (6)</span>
+      </div>
+      <div class="coll-items o">
+        <div class="t-item" onclick="load('assessmentSubmit')" data-key="assessmentSubmit"><span class="mb POST">POST</span><span class="t-name">courses/assessments/:aid/submit</span><span class="lock-sm">🔒🎓</span></div>
+        <div class="t-item" onclick="load('assessmentSubmitCode')" data-key="assessmentSubmitCode"><span class="mb POST">POST</span><span class="t-name">courses/assessments/:aid/submit-code</span><span class="lock-sm">🔒🎓</span></div>
+        <div class="t-item" onclick="load('assessmentRunSample')" data-key="assessmentRunSample"><span class="mb POST">POST</span><span class="t-name">courses/assessments/:aid/run-sample</span><span class="lock-sm">🔒🎓</span></div>
+        <div class="t-item" onclick="load('studentAssessmentById')" data-key="studentAssessmentById"><span class="mb GET">GET</span><span class="t-name">students/:cid/assessments/:aid</span><span class="lock-sm">🔒</span></div>
+        <div class="t-item" onclick="load('studentCourseAssessments')" data-key="studentCourseAssessments"><span class="mb GET">GET</span><span class="t-name">students/courses/:cid/assessments</span><span class="lock-sm">🔒🎓</span></div>
+        <div class="t-item" onclick="load('studentAssessmentsOverview')" data-key="studentAssessmentsOverview"><span class="mb GET">GET</span><span class="t-name">students/assessments/overview</span><span class="lock-sm">🔒🎓</span></div>
+      </div>
+    </div>
+    <!-- Skills & Badges -->
+    <div class="tree-collection">
+      <div class="coll-hdr" onclick="toggleColl(this)">
+        <span class="coll-arr o">▶</span>
+        <span>🏅</span>
+        <span class="coll-lbl">Skills & Badges (8)</span>
+      </div>
+      <div class="coll-items o">
+        <div class="t-item" onclick="load('badgeList')" data-key="badgeList"><span class="mb GET">GET</span><span class="t-name">badges/</span><span class="lock-sm">🔒</span></div>
+        <div class="t-item" onclick="load('badgeMe')" data-key="badgeMe"><span class="mb GET">GET</span><span class="t-name">badges/me</span><span class="lock-sm">🔒</span></div>
+        <div class="t-item" onclick="load('skillList')" data-key="skillList"><span class="mb GET">GET</span><span class="t-name">skills/</span><span class="lock-sm">🔒</span></div>
+        <div class="t-item" onclick="load('skillGet')" data-key="skillGet"><span class="mb GET">GET</span><span class="t-name">skills/:id</span><span class="lock-sm">🔒</span></div>
+        <div class="t-item" onclick="load('skillUnlocked')" data-key="skillUnlocked"><span class="mb GET">GET</span><span class="t-name">skills/me/unlocked</span><span class="lock-sm">🔒🎓</span></div>
+        <div class="t-item" onclick="load('skillCreate')" data-key="skillCreate"><span class="mb POST">POST</span><span class="t-name">skills/</span><span class="lock-sm">🔒👑</span></div>
+        <div class="t-item" onclick="load('skillUpdate')" data-key="skillUpdate"><span class="mb PATCH">PATCH</span><span class="t-name">skills/:id</span><span class="lock-sm">🔒👑</span></div>
+        <div class="t-item" onclick="load('skillDelete')" data-key="skillDelete"><span class="mb DELETE">DELETE</span><span class="t-name">skills/:id</span><span class="lock-sm">🔒👑</span></div>
+      </div>
+    </div>
+    <!-- Admin Skills -->
+    <div class="tree-collection">
+      <div class="coll-hdr" onclick="toggleColl(this)">
+        <span class="coll-arr o">▶</span>
+        <span>🛠️</span>
+        <span class="coll-lbl">Admin Skills (5)</span>
+      </div>
+      <div class="coll-items o">
+        <div class="t-item" onclick="load('adminSkillCreate')" data-key="adminSkillCreate"><span class="mb POST">POST</span><span class="t-name">admin/skills</span><span class="lock-sm">🔒👑</span></div>
+        <div class="t-item" onclick="load('adminSkillList')" data-key="adminSkillList"><span class="mb GET">GET</span><span class="t-name">admin/skills</span><span class="lock-sm">🔒👑</span></div>
+        <div class="t-item" onclick="load('adminSkillGet')" data-key="adminSkillGet"><span class="mb GET">GET</span><span class="t-name">admin/skills/:id</span><span class="lock-sm">🔒👑</span></div>
+        <div class="t-item" onclick="load('adminSkillUpdate')" data-key="adminSkillUpdate"><span class="mb PUT">PUT</span><span class="t-name">admin/skills/:id</span><span class="lock-sm">🔒👑</span></div>
+        <div class="t-item" onclick="load('adminSkillDelete')" data-key="adminSkillDelete"><span class="mb DELETE">DELETE</span><span class="t-name">admin/skills/:id</span><span class="lock-sm">🔒👑</span></div>
+      </div>
+    </div>
+    <!-- Teacher Analytics -->
+    <div class="tree-collection">
+      <div class="coll-hdr" onclick="toggleColl(this)">
+        <span class="coll-arr o">▶</span>
+        <span>📊</span>
+        <span class="coll-lbl">Teacher Analytics (4)</span>
+      </div>
+      <div class="coll-items o">
+        <div class="t-item" onclick="load('teacherFailurePoints')" data-key="teacherFailurePoints"><span class="mb GET">GET</span><span class="t-name">teacher/failure-points</span><span class="lock-sm">🔒👨‍🏫</span></div>
+        <div class="t-item" onclick="load('teacherFailureStudents')" data-key="teacherFailureStudents"><span class="mb GET">GET</span><span class="t-name">teacher/failure-points/:aid/students</span><span class="lock-sm">🔒👨‍🏫</span></div>
+        <div class="t-item" onclick="load('teacherAssessments')" data-key="teacherAssessments"><span class="mb GET">GET</span><span class="t-name">teacher/assessments</span><span class="lock-sm">🔒👨‍🏫</span></div>
+        <div class="t-item" onclick="load('teacherFailureCount')" data-key="teacherFailureCount"><span class="mb GET">GET</span><span class="t-name">teacher/failure-points/count</span><span class="lock-sm">🔒👨‍🏫</span></div>
+      </div>
+    </div>
+    <!-- Chat -->
+    <div class="tree-collection">
+      <div class="coll-hdr" onclick="toggleColl(this)">
+        <span class="coll-arr o">▶</span>
+        <span>💬</span>
+        <span class="coll-lbl">Chat FAQ (1)</span>
+      </div>
+      <div class="coll-items o">
+        <div class="t-item" onclick="load('chatFaq')" data-key="chatFaq"><span class="mb POST">POST</span><span class="t-name">chat/faq</span><span class="lock-sm">🔒</span></div>
       </div>
     </div>
   </div>
@@ -440,7 +521,44 @@ const EP = {
   notificationsReadAll: {method:'PATCH',path:'/api/notifications/read-all',desc:'Mark all notifications as read.',protected:true,params:[],bodyLang:'URL',body:`PATCH /api/notifications/read-all`,steps:['Update all unread for user'],responses:{'200 OK':{sc:'ok',body:`{ "success": true }`}},db:[],notices:[]},
 
   // ========== TEACHER TOOLS ==========
-  studentSearch: {method:'GET',path:'/api/students/search',desc:'Search teacher\'s enrolled students by name or level.',protected:true,params:[{name:'name',type:'query',req:false},{name:'level',type:'query',req:false}],bodyLang:'QUERY',body:`GET /api/students/search?name=ahmed&level=2`,steps:['Teacher only','Search enrollments'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "data": { "students": [ { "id": "...", "full_name": "Ahmed", "email": "...", "total_xp": 1200, "current_level": 2 } ] } }`}},db:[],notices:[]}
+  studentSearch: {method:'GET',path:'/api/students/search',desc:'Search teacher\'s enrolled students by name or level.',protected:true,params:[{name:'name',type:'query',req:false},{name:'level',type:'query',req:false}],bodyLang:'QUERY',body:`GET /api/students/search?name=ahmed&level=2`,steps:['Teacher only','Search enrollments'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "data": { "students": [ { "id": "...", "full_name": "Ahmed", "email": "...", "total_xp": 1200, "current_level": 2 } ] } }`}},db:[],notices:[]},
+  teacherChapterLessons: {method:'GET',path:'/api/courses/chapters/:chapterId/lessons',desc:'Get chapter lessons for teacher view.',protected:true,params:[{name:'chapterId',type:'path',req:true}],bodyLang:'URL',body:`GET /api/courses/chapters/:chapterId/lessons`,steps:['Teacher only','Validate ownership','Return lessons'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "data": [ { "id": "...", "title": "...", "order_index": 1 } ] }`}},db:[],notices:[]},
+
+  // ========== STUDENT ASSESSMENTS ==========
+  assessmentSubmit: {method:'POST',path:'/api/courses/assessments/:assessmentId/submit',desc:'Submit student answers for an assessment.',protected:true,params:[{name:'assessmentId',type:'path',req:true}],bodyLang:'JSON',body:`{ "answers": { "q1": "A", "q2": "B" } }`,steps:['Student only','Validate assessment','Grade answers','Save attempt'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "data": { "score": 80, "passed": true } }`}},db:[],notices:[]},
+  assessmentSubmitCode: {method:'POST',path:'/api/courses/assessments/:assessmentId/submit-code',desc:'Submit code answer for boss exam assessment.',protected:true,params:[{name:'assessmentId',type:'path',req:true}],bodyLang:'JSON',body:`{ "language": "javascript", "code": "function solve(){}" }`,steps:['Student only','Run judge','Store result'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "data": { "score": 90, "passed": true } }`}},db:[],notices:[]},
+  assessmentRunSample: {method:'POST',path:'/api/courses/assessments/:assessmentId/run-sample',desc:'Run sample test cases before final code submission.',protected:true,params:[{name:'assessmentId',type:'path',req:true}],bodyLang:'JSON',body:`{ "language": "javascript", "code": "function solve(){}", "test_cases": [ { "input": "1 2", "expected": "3" } ] }`,steps:['Student only','Execute sample tests','Return per-test status'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "results": [ { "input": "1 2", "expected": "3", "actual": "3", "passed": true } ] }`}},db:[],notices:[]},
+  studentAssessmentById: {method:'GET',path:'/api/students/:courseId/assessments/:assessmentId',desc:'Get one assessment details for teacher or student.',protected:true,params:[{name:'courseId',type:'path',req:true},{name:'assessmentId',type:'path',req:true}],bodyLang:'URL',body:`GET /api/students/:courseId/assessments/:assessmentId`,steps:['Verify role access','Fetch assessment details'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "data": { "id": "...", "title": "...", "questions": [] } }`}},db:[],notices:[]},
+  studentCourseAssessments: {method:'GET',path:'/api/students/courses/:courseId/assessments',desc:'Get all assessments for a student course.',protected:true,params:[{name:'courseId',type:'path',req:true}],bodyLang:'URL',body:`GET /api/students/courses/:courseId/assessments`,steps:['Student only','Fetch course assessments'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "data": [ { "id": "...", "title": "...", "status": "pending" } ] }`}},db:[],notices:[]},
+  studentAssessmentsOverview: {method:'GET',path:'/api/students/assessments/overview',desc:'Get student assessments overview summary.',protected:true,params:[],bodyLang:'HEADER',body:`Authorization: Bearer <token>`,steps:['Student only','Aggregate assessments'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "data": { "total": 10, "completed": 7, "pending": 3 } }`}},db:[],notices:[]},
+  courseSubdomain: {method:'GET',path:'/api/courses/:courseId/subdomain',desc:'Get course subdomain information for student.',protected:true,params:[{name:'courseId',type:'path',req:true}],bodyLang:'URL',body:`GET /api/courses/:courseId/subdomain`,steps:['Student only','Fetch subdomain mapping'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "data": { "subdomain_id": "...", "subdomain_name": "Frontend" } }`}},db:[],notices:[]},
+  studentUpdateProgress: {method:'POST',path:'/api/students/:studentId/update',desc:'Update student learning progress.',protected:true,params:[{name:'studentId',type:'path',req:true}],bodyLang:'JSON',body:`{ "courseId": "...", "progress": 55 }`,steps:['Validate request','Update progress records'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "message": "Progress updated" }`}},db:[],notices:[]},
+
+  // ========== BADGES & SKILLS ==========
+  badgeList: {method:'GET',path:'/api/badges',desc:'Get all available badges.',protected:true,params:[],bodyLang:'HEADER',body:`Authorization: Bearer <token>`,steps:['Authenticated user','Fetch badges list'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "badges": [ { "id": "...", "name": "Starter" } ] }`}},db:[],notices:[]},
+  badgeMe: {method:'GET',path:'/api/badges/me',desc:'Get current user earned badges.',protected:true,params:[],bodyLang:'HEADER',body:`Authorization: Bearer <token>`,steps:['Authenticated user','Fetch earned badges'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "badges": [ { "id": "...", "name": "Starter", "earned_at": "..." } ] }`}},db:[],notices:[]},
+  skillList: {method:'GET',path:'/api/skills',desc:'Get all skills.',protected:true,params:[],bodyLang:'HEADER',body:`Authorization: Bearer <token>`,steps:['Authenticated user','Fetch skills'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "data": [ { "id": "...", "name": "JavaScript" } ] }`}},db:[],notices:[]},
+  skillGet: {method:'GET',path:'/api/skills/:id',desc:'Get one skill by ID.',protected:true,params:[{name:'id',type:'path',req:true}],bodyLang:'URL',body:`GET /api/skills/:id`,steps:['Authenticated user','Fetch skill by id'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "data": { "id": "...", "name": "JavaScript" } }`}},db:[],notices:[]},
+  skillUnlocked: {method:'GET',path:'/api/skills/me/unlocked',desc:'Get unlocked skills for current student.',protected:true,params:[],bodyLang:'HEADER',body:`Authorization: Bearer <token>`,steps:['Student only','Fetch unlocked skills'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "data": [ { "id": "...", "name": "Arrays" } ] }`}},db:[],notices:[]},
+  skillCreate: {method:'POST',path:'/api/skills',desc:'Create a new skill (admin only).',protected:true,params:[{name:'name',type:'string',req:true}],bodyLang:'JSON',body:`{ "name": "Node.js", "description": "Backend basics" }`,steps:['Admin only','Insert skill'],responses:{'201 Created':{sc:'ok',body:`{ "success": true, "data": { "id": "...", "name": "Node.js" } }`}},db:[],notices:[]},
+  skillUpdate: {method:'PATCH',path:'/api/skills/:id',desc:'Update a skill (admin only).',protected:true,params:[{name:'id',type:'path',req:true}],bodyLang:'JSON',body:`{ "name": "Node.js Advanced" }`,steps:['Admin only','Update skill'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "message": "Skill updated" }`}},db:[],notices:[]},
+  skillDelete: {method:'DELETE',path:'/api/skills/:id',desc:'Delete a skill (admin only).',protected:true,params:[{name:'id',type:'path',req:true}],bodyLang:'URL',body:`DELETE /api/skills/:id`,steps:['Admin only','Delete skill'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "message": "Skill deleted" }`}},db:[],notices:[]},
+
+  // ========== ADMIN SKILLS ==========
+  adminSkillCreate: {method:'POST',path:'/api/admin/skills',desc:'Create skill from admin panel.',protected:true,params:[{name:'name',type:'string',req:true}],bodyLang:'JSON',body:`{ "name": "React", "description": "UI library" }`,steps:['Admin only','Create skill'],responses:{'201 Created':{sc:'ok',body:`{ "success": true, "data": { "id": "...", "name": "React" } }`}},db:[],notices:[]},
+  adminSkillList: {method:'GET',path:'/api/admin/skills',desc:'List all skills for admin management.',protected:true,params:[],bodyLang:'HEADER',body:`Authorization: Bearer <token>`,steps:['Admin only','Fetch all skills'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "data": [ { "id": "...", "name": "React" } ] }`}},db:[],notices:[]},
+  adminSkillGet: {method:'GET',path:'/api/admin/skills/:skillId',desc:'Get admin skill details by ID.',protected:true,params:[{name:'skillId',type:'path',req:true}],bodyLang:'URL',body:`GET /api/admin/skills/:skillId`,steps:['Admin only','Fetch skill'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "data": { "id": "...", "name": "React" } }`}},db:[],notices:[]},
+  adminSkillUpdate: {method:'PUT',path:'/api/admin/skills/:skillId',desc:'Update admin skill record.',protected:true,params:[{name:'skillId',type:'path',req:true}],bodyLang:'JSON',body:`{ "name": "React Advanced" }`,steps:['Admin only','Update skill'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "message": "Skill updated" }`}},db:[],notices:[]},
+  adminSkillDelete: {method:'DELETE',path:'/api/admin/skills/:skillId',desc:'Delete admin skill record.',protected:true,params:[{name:'skillId',type:'path',req:true}],bodyLang:'URL',body:`DELETE /api/admin/skills/:skillId`,steps:['Admin only','Delete skill'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "message": "Skill deleted" }`}},db:[],notices:[]},
+
+  // ========== TEACHER ANALYTICS ==========
+  teacherFailurePoints: {method:'GET',path:'/api/teacher/failure-points',desc:'Get top failure points for teacher assessments.',protected:true,params:[{name:'limit',type:'query',req:false,desc:'Default 5'}],bodyLang:'QUERY',body:`GET /api/teacher/failure-points?limit=5`,steps:['Teacher only','Aggregate failed questions'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "data": [ { "assessment_id": "...", "assessment_title": "...", "failed_count": 12 } ] }`}},db:[],notices:[]},
+  teacherFailureStudents: {method:'GET',path:'/api/teacher/failure-points/:assessmentId/students',desc:'Get students who failed a specific assessment.',protected:true,params:[{name:'assessmentId',type:'path',req:true}],bodyLang:'URL',body:`GET /api/teacher/failure-points/:assessmentId/students`,steps:['Teacher only','Fetch students list'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "data": [ { "student_id": "...", "full_name": "Ahmed", "score": 45 } ] }`}},db:[],notices:[]},
+  teacherAssessments: {method:'GET',path:'/api/teacher/assessments',desc:'Get teacher assessments summary.',protected:true,params:[],bodyLang:'HEADER',body:`Authorization: Bearer <token>`,steps:['Teacher only','Fetch assessments'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "data": [ { "id": "...", "title": "...", "submissions": 20 } ] }`}},db:[],notices:[]},
+  teacherFailureCount: {method:'GET',path:'/api/teacher/failure-points/count',desc:'Get total count of failure points.',protected:true,params:[],bodyLang:'HEADER',body:`Authorization: Bearer <token>`,steps:['Teacher only','Count failure points'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "count": 18 }`}},db:[],notices:[]},
+
+  // ========== CHAT ==========
+  chatFaq: {method:'POST',path:'/api/chat/faq',desc:'Ask FAQ assistant question.',protected:true,params:[{name:'question',type:'string',req:true}],bodyLang:'JSON',body:`{ "question": "How do I enroll in a course?" }`,steps:['Authenticated user','Process FAQ request'],responses:{'200 OK':{sc:'ok',body:`{ "success": true, "answer": "Use the students/enroll endpoint..." }`}},db:[],notices:[]}
 };
 
 let cur = 'signup', p2tab = 'params', p3tab = '';
