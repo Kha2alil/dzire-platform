@@ -27,23 +27,23 @@ const createGamificationStats = async (userId, role, subdomainId) => {
  * Fetch gamification stats by student_id
  */
 const findByUserId = async (userId) => {
-
     const query = `
-    SELECT
-        id,
-        student_id,
-        total_xp,
-        current_level,
-        \`rank\`,
-        updated_at
-    FROM gamification_stats
-    WHERE student_id = ?
-    LIMIT 1
+        SELECT id, student_id, total_xp, current_level, \`rank\`, updated_at
+        FROM gamification_stats
+        WHERE student_id = ?
+        LIMIT 1
     `;
-
     const [rows] = await db.query(query, [userId]);
-
-    return rows[0] || null;
+    
+    // Return default empty stats if none exist
+    return rows[0] || {
+        id: null,
+        student_id: userId,
+        total_xp: 0,
+        current_level: 1,
+        rank: null,
+        updated_at: new Date()
+    };
 };
 
 module.exports = {

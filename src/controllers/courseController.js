@@ -611,6 +611,26 @@ const submitBossExam = async (req, res, next) => {
     }
 };
 
+const updateCourseInfo = async (req, res, next) => {
+    try {
+        const { courseId } = req.params;
+        const { title, description } = req.body;
+        const currentUser = req.user; // من middleware authenticate
+
+        const updatedCourse = await courseService.updateCourseInfo(
+            courseId,
+            { title, description },
+            { id: currentUser.id, role: currentUser.role }
+        );
+
+        res.json({
+            message: 'Course info updated successfully',
+            course: updatedCourse
+        });
+    } catch (error) {
+        next(error);
+    }
+};
 module.exports = {
     createCourse,
     getTeacherCourses,
@@ -647,5 +667,6 @@ module.exports = {
     getTeacherDashboard,
     submitBossExam,
     getChapterLessons,
-    getCourseSubdomain
+    getCourseSubdomain,
+    updateCourseInfo
 };

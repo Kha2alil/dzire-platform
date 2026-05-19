@@ -573,51 +573,63 @@ const getFormattedContents = async (studentId, courseId, chapterId, lessonId) =>
 };
 
 const finishLessonAndAwardXP = async (studentId, courseId, chapterId, lessonId, xp_reward) => {
-    // 1. جلب بيانات الدرس أولاً لمعرفة ترتيبه (order_index)
-    // 1. جلب بيانات الدرس (للتأكد من وجوده ومعرفة ترتيبه)
     const lesson = await courseRepository.getLessonById(lessonId);
+    if (!lesson) throw new Error("Lesson does not exist");
 
-    if (!lesson) {
-        console.error(`Lesson not found: ${lessonId}`);
-        
-        throw new Error("Lesson does not exist");
-    }
-
-    // 2. جلب معلومات الكورس (subdomain_id و difficulty_level)
     const courseInfo = await studentRepository.getCourseInfo(courseId);
-    if (!courseInfo) {
-        throw new Error("Course not found");
-    }
-    const { subdomain_id: subdomainId, difficulty_level: courseLevel } = courseInfo;
-    const courseLevelNormalized = courseLevel.charAt(0).toUpperCase() + courseLevel.slice(1).toLowerCase();
-
-    // 3. جلب المستوى الحالي للطالب في هذا المجال الفرعي
-    const subdomainStats = await studentRepository.getSubdomainStats(studentId, subdomainId);
-    const studentSubdomainLevel = subdomainStats ? subdomainStats.new_level : 'Beginner';
+    if (!courseInfo) throw new Error("Course not found");
+    const { subdomain_id: subdomainId } = courseInfo;
 
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
 
-        // 2. محاولة تحديث التقدم (ستنجح فقط إذا كان الدرس جديداً على الطالب)
-        // 4. تحديث التقدم (يتم فقط إذا كان الدرس جديداً)
         const isUpdated = await courseRepository.updateEnrollmentProgress(
-            connection,
-            studentId,
-            courseId,
-            lesson.order_index
+            connection, studentId, courseId, lesson.order_index
         );
 
         if (isUpdated) {
-            // 3. نزيد الـ XP فقط إذا زاد التقدم (أي أن الدرس لم يسبق إكماله)
-         
-            // 5. إضافة XP إلى total_xp (دائماً)
+            // Award subdomain XP
+            if (subdomainId && xp_reward > 0) {
+                try {
+                    await studentService.updateStudentProgress(studentId, subdomainId, xp_reward);
+                } catch (err) {
+                    console.error('Failed to update subdomain progress:', err.message);
+                }
+            }
 
+            // Update lesson stats & badges
+            const progressAggregator = require('./progressAggregator');
+            try {
+                await progressAggregator.handleLessonCompleted(studentId, courseId, lessonId, xp_reward);
+            } catch (err) {
+                console.error('Failed to update progress aggregator:', err.message);
+            }
+
+            // 🔓 Check if course is now fully completed → unlock skill + trigger course_completed badge
+            try {
+                const [maxOrderRow] = await db.query(
+                    "SELECT MAX(order_index) as maxOrder FROM lessons WHERE course_id = ?",
+                    [courseId]
+                );
+                const maxOrder = maxOrderRow[0]?.maxOrder || 0;
+                const isComplete = lesson.order_index >= maxOrder;
+
+                if (isComplete) {
+                    const skillService = require('./skillService');
+                    await skillService.unlockSkillIfCourseCompleted(studentId, courseId);
+                    await progressAggregator.handleCourseCompleted(studentId, courseId);
+                }
+            } catch (err) {
+                console.error('Failed to unlock skill / course_completed badge:', err.message);
+            }
 
             await connection.commit();
-            return { message: "Great! Progress updated and XP awarded" };
+            return { 
+                message: "Great! Progress updated and XP awarded",
+                xp_gained: xp_reward || 0
+            };
         } else {
-            // إذا لم يتأثر أي سطر، فهذا يعني أن الطالب أعاد درساً قديماً
             await connection.rollback();
             return { message: "You have already completed this lesson, no new XP to award" };
         }
@@ -706,7 +718,7 @@ const submitAssessment = async (studentId, assessmentId, studentAnswers) => {
     for (const ans of studentAnswers) {
         const { questionId, answer } = ans;
         const question = questionMap.get(questionId);
-        if (!question) continue; // تجاهل الأسئلة غير الموجودة
+        if (!question) continue;
 
         totalPoints += question.points;
 
@@ -714,21 +726,16 @@ const submitAssessment = async (studentId, assessmentId, studentAnswers) => {
         const correctAnswerRaw = question.correct_answer;
         if (correctAnswerRaw === null || correctAnswerRaw === undefined) continue;
 
-        // معالجة الحالات المختلفة للإجابة
         if (Array.isArray(answer)) {
-            // إذا كانت الإجابة مصفوفة (checkbox)
             const expected = correctAnswerRaw.split(',').map(s => s.trim());
             const actual = answer.map(a => a.trim()).sort();
             const expectedSorted = expected.sort();
             isCorrect = actual.length === expectedSorted.length && actual.every((val, idx) => val === expectedSorted[idx]);
         } else if (typeof answer === 'string') {
-            // إذا كانت الإجابة نصًا (radio أو نص حر)
             const userAnswer = answer.trim();
             const correctAnswer = correctAnswerRaw.trim();
             isCorrect = (userAnswer === correctAnswer);
-            // يمكن إضافة تجاهل الحالة: userAnswer.toLowerCase() === correctAnswer.toLowerCase()
         } else {
-            // أي نوع آخر (غير متوقع) -> غير صحيح
             isCorrect = false;
         }
 
@@ -743,11 +750,23 @@ const submitAssessment = async (studentId, assessmentId, studentAnswers) => {
     // 6. حفظ المحاولة
     await _saveStudentAssessment(studentId, assessmentId, score, passed);
 
-    // 7. إذا اجتاز، تحديث الشارات (اختياري)
+    // 7. إذا اجتاز، تحديث الشارات + فتح المهارة إذا اكتمل الكورس
     if (passed) {
+        // تحديث الشارات
         const progressAggregator = require('./progressAggregator');
         await progressAggregator.handleQuizPassed(studentId, assessmentId, score, passed)
             .catch(err => console.error('Quiz badge evaluation failed:', err.message));
+
+        // 🔓 التحقق إذا كان الكورس قد اكتمل الآن وفتح المهارة
+        try {
+            const enrollment = await courseRepository.getEnrollmentData(studentId, assessment.course_id);
+            if (enrollment && enrollment.progress_percentage >= 100) {
+                const skillService = require('./skillService');
+                await skillService.unlockSkillIfCourseCompleted(studentId, assessment.course_id);
+            }
+        } catch (err) {
+            console.error('Failed to unlock skill after assessment:', err.message);
+        }
     }
 
     return {
@@ -956,6 +975,43 @@ const getCourseSubdomain = async (courseId) => {
 
 
 
+const updateCourseInfo = async (courseId, updateData, currentUser) => {
+    // 1. التحقق من وجود الكورس
+    const course = await courseRepository.findCourseById(courseId);
+    if (!course) {
+        throw new Error('Course not found');
+    }
+
+    // 2. التحقق من الصلاحيات (المالك أو أدمن)
+    const isAdmin = currentUser.role === 'admin';
+    const isOwner = course.teacher_id === currentUser.id;
+    if (!isAdmin && !isOwner) {
+        throw new Error('You are not authorized to edit this course');
+    }
+
+    // 3. التحقق من وجود بيانات صالحة للتحديث
+    if (!updateData.title && !updateData.description) {
+        throw new Error('At least title or description must be provided');
+    }
+
+    // 4. التحقق من طول النصوص (اختياري حسب متطلباتك)
+    if (updateData.title && (updateData.title.length < 3 || updateData.title.length > 255)) {
+        throw new Error('Title must be between 3 and 255 characters');
+    }
+    if (updateData.description && updateData.description.length > 2000) {
+        throw new Error('Description cannot exceed 2000 characters');
+    }
+
+    // 5. تحديث الكورس باستخدام الدالة الموجودة updateCourse
+    const updatedCourse = await courseRepository.updateCourse(courseId, {
+        title: updateData.title,
+        description: updateData.description
+    });
+
+    return updatedCourse;
+};
+
+
 
 
 // ============================================================
@@ -999,4 +1055,5 @@ module.exports = {
     getLessonsByChapter, 
     getCourseSubdomain,
     submitBossExam
+   ,updateCourseInfo
 };

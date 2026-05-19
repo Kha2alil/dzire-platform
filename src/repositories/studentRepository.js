@@ -211,7 +211,14 @@ const getStudentAssessmentsOverview = async (studentId) => {
     const [rows] = await db.query(query, [studentId, studentId]);
     return rows;
 };
-// التحقق مما إذا كان الطالب قد اجتاز هذا التقييم سابقاً
+
+const createGamificationStatsForSubdomain = async (studentId, subdomainId) => {
+    await db.query(
+        `INSERT INTO gamification_stats (student_id, subdomain_id) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE student_id = student_id`,
+        [studentId, subdomainId]
+    );
+};
 
 module.exports = { searchStudents,
     enrollStudent,
@@ -221,5 +228,6 @@ module.exports = { searchStudents,
     updateSubdomainXP, upgradeSubdomainLevel,
     getGlobalStats, updateGlobalStats,
     getPlacementLevel, getSkillsBySubdomain, hasCompletedCourseForSkill,
-    getAssessmentsByCourse, getStudentAssessmentsOverview
+    getAssessmentsByCourse, getStudentAssessmentsOverview,
+    createGamificationStatsForSubdomain
     };

@@ -30,22 +30,33 @@ const createCourse = async (courseData) => {
 };
 
 const findCourseById = async (id) => {
-    const query = `
-        SELECT
-            c.id, c.teacher_id, c.title, c.description, c.subdomain_id,
-            c.difficulty_level, c.thumbnail_url, c.is_published, c.created_at,
-            c.skill_id,                                    -- ✅ ADD THIS
-            u.full_name AS teacher_name, s.name AS subdomain_name
-        FROM courses c
-        JOIN users u ON c.teacher_id = u.id
-        JOIN subdomains s ON c.subdomain_id = s.id
-        WHERE c.id = ?
-        LIMIT 1
-    `;
-    const [rows] = await db.query(query, [id]);
-    return rows[0] || null;
-};
+  // جلب بيانات الكورس الأساسية (كما هي موجودة)
+  const query = `
+    SELECT
+        c.id, c.teacher_id, c.title, c.description, c.subdomain_id,
+        c.difficulty_level, c.thumbnail_url, c.is_published, c.created_at,
+        c.skill_id,
+        u.full_name AS teacher_name, s.name AS subdomain_name
+    FROM courses c
+    JOIN users u ON c.teacher_id = u.id
+    JOIN subdomains s ON c.subdomain_id = s.id
+    WHERE c.id = ?
+    LIMIT 1
+  `;
+  const [rows] = await db.query(query, [id]);
+  const course = rows[0];
+  if (!course) return null;
 
+  // جلب الإحصائيات
+  const studentsCount = await getCourseStudentsCount(id);
+  const lessonsCount = await getCourseLessonsCount(id);
+
+  return {
+    ...course,
+    students_count: studentsCount,
+    total_lessons: lessonsCount
+  };
+};
 const findCoursesByTeacher = async (teacherId) => {
     const query = `
         SELECT 
@@ -540,9 +551,9 @@ const updateStudentXP = async (executor, studentId, xpAmount) => {
 
     await executor.query(query, [xpAmount, xpAmount, studentId]);
 };
+
 // ب. تحديث نسبة التقدم في جدول enrollments
 const updateEnrollmentProgress = async (executor, studentId, courseId, lessonOrderIndex) => {
-    // 1. حساب عدد الدروس الكلي للحفاظ على دقة النسبة المئوية
     const [rows] = await executor.query(
         "SELECT COUNT(*) as total FROM lessons WHERE course_id = ?",
         [courseId]
@@ -550,8 +561,6 @@ const updateEnrollmentProgress = async (executor, studentId, courseId, lessonOrd
     const totalLessons = rows[0].total || 1;
     const progressStep = 100 / totalLessons;
 
-    // 2. التحديث الجوهري:
-    // نحدث النسبة المئوية و "آخر درس مكتمل" بشرط أن يكون الدرس الحالي أبعد مما وصل إليه الطالب سابقاً
     const updateQuery = `
         UPDATE enrollments 
         SET 
@@ -560,15 +569,23 @@ const updateEnrollmentProgress = async (executor, studentId, courseId, lessonOrd
         WHERE student_id = ? 
           AND course_id = ? 
           AND last_completed_order < ?`;
-    // الشرط الأخير هو السر: لا تلمس قاعدة البيانات إذا كان الدرس قديماً
 
     const [result] = await executor.query(updateQuery, [
-        lessonOrderIndex, progressStep, // لحساب النسبة بناءً على الترتيب الحالي
-        lessonOrderIndex,               // لتحديث آخر درس مكتمل
+        lessonOrderIndex, progressStep,
+        lessonOrderIndex,
         studentId,
         courseId,
-        lessonOrderIndex                // المقارنة مع الترتيب الحالي
+        lessonOrderIndex
     ]);
+
+    console.log('🔧 updateEnrollmentProgress:', {
+        lessonOrderIndex,
+        totalLessons,
+        progressStep,
+        affectedRows: result.affectedRows,
+        studentId,
+        courseId
+    });
 
     return result.affectedRows > 0;
 };
@@ -821,6 +838,26 @@ const getStudentAssessmentStatus = async (studentId, assessmentId) => {
         last_score: rows[0].score
     };
 };
+
+const getCourseStudentsCount = async (courseId) => {
+  const [rows] = await db.query(
+    `SELECT COUNT(DISTINCT student_id) AS count 
+     FROM enrollments 
+     WHERE course_id = ?`,
+    [courseId]
+  );
+  return rows[0].count;
+};
+
+const getCourseLessonsCount = async (courseId) => {
+  const [rows] = await db.query(
+    `SELECT COUNT(*) AS count 
+     FROM lessons 
+     WHERE course_id = ?`,
+    [courseId]
+  );
+  return rows[0].count;
+};
 // لا تنسَ إضافتهم في module.exports في نهاية الملف
 module.exports = {
     createCourse, findCourseById, findCoursesByTeacher, updateCourse, updateCourseThumbnail, deleteCourse,
@@ -831,5 +868,5 @@ module.exports = {
     getAllChapters, getAssessmentResult, getLessonsByChapter, getLessonById, getTotalCourseLessons,
     getEnrollmentData, getRawContentsByLesson, updateStudentXP, updateEnrollmentProgress, checkLessonBelongsToChapter, findAvailableCourses, findEnrolledCoursesByStudent,
     getTeacherStudentCount, getStudentProgressInCourses, findAssessmentByIds, findQuestionsByAssessmentIds, getCourseSubdomain, getTeacherAssessments, getTeacherFailurePoints, getStudentsByAssessment
-    ,hasStudentPassedAssessment , getStudentAssessmentStatus
+    ,hasStudentPassedAssessment , getStudentAssessmentStatus , getCourseStudentsCount, getCourseLessonsCount
 };

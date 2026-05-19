@@ -48,4 +48,19 @@ router.get('/assessments/overview', authMiddleware, roleMiddleware('student'), a
     }
 });
 
+router.get('/evaluate-all-badges', authMiddleware, async (req, res, next) => {
+    try {
+        const badgeService = require('../services/badgeService');
+        const triggers = ['lesson_completed', 'quiz_passed', 'course_completed', 'skill_unlocked'];
+        const results = [];
+        for (const trigger of triggers) {
+            const awarded = await badgeService.evaluateAndAwardBadges(req.user.id, trigger);
+            results.push({ trigger, awarded });
+        }
+        res.json({ success: true, results });
+    } catch (err) {
+        next(err);
+    }
+});
+
 module.exports = router;
