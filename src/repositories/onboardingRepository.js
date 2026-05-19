@@ -45,17 +45,27 @@ const OnboardingRepository = {
     return rows[0] || null;
   },
 
-    async getQuestions(subdomainId, level, limit = 10) {
-    const [rows] = await db.execute(
-      `SELECT id, question_text, options, points
-       FROM   placement_questions
-       WHERE  subdomain_id = ? AND level = ?
-       ORDER  BY RAND()
-       LIMIT  ${parseInt(limit)}`,
-      [subdomainId, level]
-    );
+  async getQuestions(subdomainId, level, limit = 10) {
+    let query = '';
+    let params = [];
+    if (level) {
+        query = `SELECT id, question_text, options, points
+                 FROM placement_questions
+                 WHERE subdomain_id = ? AND level = ?
+                 ORDER BY RAND()
+                 LIMIT ${parseInt(limit)}`;
+        params = [subdomainId, level];
+    } else {
+        query = `SELECT id, question_text, options, points
+                 FROM placement_questions
+                 WHERE subdomain_id = ?
+                 ORDER BY RAND()
+                 LIMIT ${parseInt(limit)}`;
+        params = [subdomainId];
+    }
+    const [rows] = await db.execute(query, params);
     return rows;
-    },
+  },
 
     async savePlacementResult({ studentId, subdomainId, domainId, level, score }) {
     const [result] = await db.execute(
@@ -76,7 +86,6 @@ const OnboardingRepository = {
     );
     return rows;
   },
-
 
 };
 

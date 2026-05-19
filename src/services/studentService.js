@@ -1,6 +1,4 @@
 const studentRepository = require('../repositories/studentRepository');
-const courseRepository = require('../repositories/courseRepository');
-
 /**
  * البحث عن طلاب الأستاذ
  * Search teacher's students
@@ -32,7 +30,34 @@ const enrollInCourse = async (studentId, courseId) => {
         throw new Error('Course not found');
     }
 
-    return await studentRepository.enrollStudent(studentId, courseId);
+    const enrollment = await studentRepository.enrollStudent(studentId, courseId);
+
+    // Notify the teacher about the new enrollment
+    try {
+        const notificationService = require('./notificationService');
+        const courseRepository = require('../repositories/courseRepository');
+        notificationService.notifyAdmins(
+            'enrollment',
+            '📚 New Enrollment',
+            `A student enrolled in the course "${courseInfo.title}".`,
+            '/teacher-students.html'
+        ).catch(() => {});
+
+        const course = await courseRepository.findCourseById(courseId);
+        if (course) {
+            await notificationService.notifyTeacher(
+                courseId,
+                'enrollment',
+                '📚 New Enrollment',
+                `A new student has enrolled in your course "${course.title}".`
+            );
+        }
+
+    } catch (err) {
+        console.error('Failed to notify teacher:', err.message);
+    }
+
+    return enrollment;
 };
 
 const fetchLeaderboard = async () => {
@@ -160,8 +185,6 @@ function calculateGlobalLevel(totalXP) {
     }
     return level;
 }
-
-// services/courseService.js
 
 const getAssessmentWithQuestions = async (studentId, assessmentId) => {
     console.log("🔍 getAssessmentWithQuestions called with:", { studentId, assessmentId });

@@ -213,6 +213,13 @@ const updateUsername = async (userId, username) => {
     return result.affectedRows > 0;
 };
 
+const findAdminIds = async () => {
+    const [rows] = await db.query(
+        "SELECT id FROM users WHERE role = 'admin' AND status = 'active'"
+    );
+    return rows.map(r => r.id);
+};
+
 // Exports — تصدير جميع الدوال
 module.exports = {
     createUser,
@@ -221,5 +228,6 @@ module.exports = {
     updateVerificationStatus,
     updateFullName,
     updatePassword,
-    updateUsername
+    updateUsername,
+    findAdminIds
 };
