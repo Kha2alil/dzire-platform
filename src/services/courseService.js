@@ -975,6 +975,43 @@ const getCourseSubdomain = async (courseId) => {
 
 
 
+const updateCourseInfo = async (courseId, updateData, currentUser) => {
+    // 1. التحقق من وجود الكورس
+    const course = await courseRepository.findCourseById(courseId);
+    if (!course) {
+        throw new Error('Course not found');
+    }
+
+    // 2. التحقق من الصلاحيات (المالك أو أدمن)
+    const isAdmin = currentUser.role === 'admin';
+    const isOwner = course.teacher_id === currentUser.id;
+    if (!isAdmin && !isOwner) {
+        throw new Error('You are not authorized to edit this course');
+    }
+
+    // 3. التحقق من وجود بيانات صالحة للتحديث
+    if (!updateData.title && !updateData.description) {
+        throw new Error('At least title or description must be provided');
+    }
+
+    // 4. التحقق من طول النصوص (اختياري حسب متطلباتك)
+    if (updateData.title && (updateData.title.length < 3 || updateData.title.length > 255)) {
+        throw new Error('Title must be between 3 and 255 characters');
+    }
+    if (updateData.description && updateData.description.length > 2000) {
+        throw new Error('Description cannot exceed 2000 characters');
+    }
+
+    // 5. تحديث الكورس باستخدام الدالة الموجودة updateCourse
+    const updatedCourse = await courseRepository.updateCourse(courseId, {
+        title: updateData.title,
+        description: updateData.description
+    });
+
+    return updatedCourse;
+};
+
+
 
 
 // ============================================================
@@ -1018,4 +1055,5 @@ module.exports = {
     getLessonsByChapter, 
     getCourseSubdomain,
     submitBossExam
+   ,updateCourseInfo
 };
