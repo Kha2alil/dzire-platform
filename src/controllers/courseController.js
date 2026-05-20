@@ -668,5 +668,5 @@ module.exports = {
     submitBossExam,
     getChapterLessons,
     getCourseSubdomain,
-    updateCourseInfo
+    updateCourseInfo  
 };
