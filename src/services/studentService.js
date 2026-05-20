@@ -1,4 +1,5 @@
 const studentRepository = require('../repositories/studentRepository');
+const courseRepository = require('../repositories/courseRepository');
 /**
  * البحث عن طلاب الأستاذ
  * Search teacher's students
@@ -82,6 +83,7 @@ const GENERAL_LEVEL_THRESHOLDS = [
     12813, 15476, 18671, 22505, 27106, 32627, 39252,
     47202, 56742, 68190, 81928, 98314
 ];
+
 
 const updateStudentProgress = async (studentId, subdomainId, xpGained, targetXPOverride = null) => {
     // 1. الحصول على سجل الـ subdomain للطالب
