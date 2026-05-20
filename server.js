@@ -53,6 +53,7 @@ app.get('/api/subdomains',    authMiddleware, OnboardingController.getSubdomains
 app.use('/api/skills',        skills);
 app.use('/api/badges',        badgeRoutes);
 app.use('/api/chat',          faqRoutes);
+app.use('/api/student', require('./src/routes/studentRoutes'));
 
 // ── Global error handler (must be last) ──
 const errorHandler = require('./src/middlewares/errorHandler');

@@ -1,4 +1,6 @@
 const notificationRepo = require('../repositories/notificationRepository');
+const db = require('../config/database');
+const userRepository = require('../repositories/userRepository');
 
 /**
  * Send a generic notification
@@ -97,11 +99,47 @@ const broadcastSystemNotification = async (userIds, title, message, link = null)
     // Note: For large user bases, you would batch insert instead of looping.
 };
 
+/**
+ * Notify the teacher of a course about a student event
+ * @param {string} courseId
+ * @param {string} type - 'enrollment' | 'achievement' | 'system'
+ * @param {string} title
+ * @param {string} message
+ */
+const notifyTeacher = async (courseId, type, title, message) => {
+    try {
+        const [courseRows] = await db.query(
+            `SELECT teacher_id FROM courses WHERE id = ? LIMIT 1`,
+            [courseId]
+        );
+        if (courseRows.length === 0) return;
+        const teacherId = courseRows[0].teacher_id;
+        await notificationRepo.create({
+            user_id: teacherId,
+            type,
+            title,
+            message,
+            link: '/teacher-students.html'
+        });
+    } catch (err) {
+        console.error('Failed to notify teacher:', err.message);
+    }
+};
+
+const notifyAdmins = async (type, title, message, link = null) => {
+    const adminIds = await userRepository.findAdminIds();
+    for (const adminId of adminIds) {
+        await sendNotification(adminId, type, title, message, link);
+    }
+};
+
 module.exports = {
     sendNotification,
     notifyEnrollment,
     notifyBadgeEarned,
     notifyQuestCompleted,
     sendSystemNotification,
-    broadcastSystemNotification
+    broadcastSystemNotification,
+    notifyTeacher,
+    notifyAdmins
 };

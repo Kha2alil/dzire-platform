@@ -1,0 +1,428 @@
+Folder PATH listing
+Volume serial number is 00000076 8A76:984A
+C:.
++---.vscode
++---data
++---node_modules
+¦   +---.bin
+¦   +---@hapi
+¦   ¦   +---address
+¦   ¦   ¦   +---dist
+¦   ¦   ¦   +---esm
+¦   ¦   ¦   +---src
+¦   ¦   +---formula
+¦   ¦   ¦   +---lib
+¦   ¦   +---hoek
+¦   ¦   ¦   +---lib
+¦   ¦   +---pinpoint
+¦   ¦   ¦   +---lib
+¦   ¦   +---tlds
+¦   ¦   ¦   +---dist
+¦   ¦   ¦       +---commonjs
+¦   ¦   ¦       +---esm
+¦   ¦   +---topo
+¦   ¦       +---lib
+¦   +---@standard-schema
+¦   ¦   +---spec
+¦   ¦       +---dist
+¦   +---@types
+¦   ¦   +---node
+¦   ¦       +---assert
+¦   ¦       +---compatibility
+¦   ¦       +---dns
+¦   ¦       +---fs
+¦   ¦       +---inspector
+¦   ¦       +---path
+¦   ¦       +---readline
+¦   ¦       +---stream
+¦   ¦       +---test
+¦   ¦       +---timers
+¦   ¦       +---ts5.6
+¦   ¦       ¦   +---compatibility
+¦   ¦       +---ts5.7
+¦   ¦       ¦   +---compatibility
+¦   ¦       +---util
+¦   ¦       +---web-globals
+¦   +---accepts
+¦   +---anymatch
+¦   +---append-field
+¦   ¦   +---lib
+¦   ¦   +---test
+¦   +---asynckit
+¦   ¦   +---lib
+¦   +---aws-ssl-profiles
+¦   ¦   +---lib
+¦   ¦       +---@types
+¦   ¦       +---profiles
+¦   ¦           +---ca
+¦   +---axios
+¦   ¦   +---dist
+¦   ¦   ¦   +---browser
+¦   ¦   ¦   +---esm
+¦   ¦   ¦   +---node
+¦   ¦   +---lib
+¦   ¦       +---adapters
+¦   ¦       +---cancel
+¦   ¦       +---core
+¦   ¦       +---defaults
+¦   ¦       +---env
+¦   ¦       ¦   +---classes
+¦   ¦       +---helpers
+¦   ¦       +---platform
+¦   ¦           +---browser
+¦   ¦           ¦   +---classes
+¦   ¦           +---common
+¦   ¦           +---node
+¦   ¦               +---classes
+¦   +---balanced-match
+¦   ¦   +---dist
+¦   ¦       +---commonjs
+¦   ¦       +---esm
+¦   +---bcrypt
+¦   ¦   +---.github
+¦   ¦   ¦   +---workflows
+¦   ¦   +---examples
+¦   ¦   +---prebuilds
+¦   ¦   ¦   +---darwin-arm64
+¦   ¦   ¦   +---darwin-x64
+¦   ¦   ¦   +---linux-arm
+¦   ¦   ¦   +---linux-arm64
+¦   ¦   ¦   +---linux-x64
+¦   ¦   ¦   +---win32-arm64
+¦   ¦   ¦   +---win32-x64
+¦   ¦   +---src
+¦   ¦   +---test
+¦   +---binary-extensions
+¦   +---body-parser
+¦   ¦   +---lib
+¦   ¦       +---types
+¦   +---brace-expansion
+¦   ¦   +---dist
+¦   ¦       +---commonjs
+¦   ¦       +---esm
+¦   +---braces
+¦   ¦   +---lib
+¦   +---buffer-equal-constant-time
+¦   +---buffer-from
+¦   +---busboy
+¦   ¦   +---.github
+¦   ¦   ¦   +---workflows
+¦   ¦   +---bench
+¦   ¦   +---lib
+¦   ¦   ¦   +---types
+¦   ¦   +---test
+¦   +---bytes
+¦   +---call-bind-apply-helpers
+¦   ¦   +---.github
+¦   ¦   +---test
+¦   +---call-bound
+¦   ¦   +---.github
+¦   ¦   +---test
+¦   +---chokidar
+¦   ¦   +---lib
+¦   ¦   +---types
+¦   +---combined-stream
+¦   ¦   +---lib
+¦   +---concat-stream
+¦   +---content-disposition
+¦   +---content-type
+¦   +---cookie
+¦   +---cookie-parser
+¦   ¦   +---node_modules
+¦   ¦       +---cookie-signature
+¦   +---cookie-signature
+¦   +---cors
+¦   ¦   +---lib
+¦   +---debug
+¦   ¦   +---src
+¦   +---delayed-stream
+¦   ¦   +---lib
+¦   +---denque
+¦   +---depd
+¦   ¦   +---lib
+¦   ¦       +---browser
+¦   +---dotenv
+¦   ¦   +---lib
+¦   +---dunder-proto
+¦   ¦   +---.github
+¦   ¦   +---test
+¦   +---ecdsa-sig-formatter
+¦   ¦   +---src
+¦   +---ee-first
+¦   +---encodeurl
+¦   +---es-define-property
+¦   ¦   +---.github
+¦   ¦   +---test
+¦   +---es-errors
+¦   ¦   +---.github
+¦   ¦   +---test
+¦   +---es-object-atoms
+¦   ¦   +---.github
+¦   ¦   +---test
+¦   +---es-set-tostringtag
+¦   ¦   +---test
+¦   +---escape-html
+¦   +---etag
+¦   +---express
+¦   ¦   +---lib
+¦   +---fill-range
+¦   +---finalhandler
+¦   +---follow-redirects
+¦   +---form-data
+¦   ¦   +---lib
+¦   ¦   +---node_modules
+¦   ¦       +---mime-db
+¦   ¦       +---mime-types
+¦   +---forwarded
+¦   +---fresh
+¦   +---function-bind
+¦   ¦   +---.github
+¦   ¦   +---test
+¦   +---generate-function
+¦   +---get-intrinsic
+¦   ¦   +---.github
+¦   ¦   +---test
+¦   +---get-proto
+¦   ¦   +---.github
+¦   ¦   +---test
+¦   +---glob-parent
+¦   +---gopd
+¦   ¦   +---.github
+¦   ¦   +---test
+¦   +---has-flag
+¦   +---has-symbols
+¦   ¦   +---.github
+¦   ¦   +---test
+¦   ¦       +---shams
+¦   +---has-tostringtag
+¦   ¦   +---.github
+¦   ¦   +---test
+¦   ¦       +---shams
+¦   +---hasown
+¦   ¦   +---.github
+¦   +---http-errors
+¦   +---iconv-lite
+¦   ¦   +---encodings
+¦   ¦   ¦   +---tables
+¦   ¦   +---lib
+¦   ¦   ¦   +---helpers
+¦   ¦   +---types
+¦   +---ignore-by-default
+¦   +---inherits
+¦   +---ipaddr.js
+¦   ¦   +---lib
+¦   +---is-binary-path
+¦   +---is-extglob
+¦   +---is-glob
+¦   +---is-number
+¦   +---is-promise
+¦   +---is-property
+¦   +---joi
+¦   ¦   +---dist
+¦   ¦   +---lib
+¦   ¦       +---types
+¦   +---jsonwebtoken
+¦   ¦   +---lib
+¦   +---jwa
+¦   +---jws
+¦   ¦   +---lib
+¦   +---lodash.includes
+¦   +---lodash.isboolean
+¦   +---lodash.isinteger
+¦   +---lodash.isnumber
+¦   +---lodash.isplainobject
+¦   +---lodash.isstring
+¦   +---lodash.once
+¦   +---long
+¦   ¦   +---umd
+¦   +---lru.min
+¦   ¦   +---browser
+¦   ¦   +---lib
+¦   +---math-intrinsics
+¦   ¦   +---.github
+¦   ¦   +---constants
+¦   ¦   +---test
+¦   +---media-typer
+¦   +---merge-descriptors
+¦   +---mime-db
+¦   +---mime-types
+¦   +---minimatch
+¦   ¦   +---dist
+¦   ¦       +---commonjs
+¦   ¦       +---esm
+¦   +---ms
+¦   +---multer
+¦   ¦   +---lib
+¦   ¦   +---node_modules
+¦   ¦   ¦   +---media-typer
+¦   ¦   ¦   +---mime-db
+¦   ¦   ¦   +---mime-types
+¦   ¦   ¦   +---type-is
+¦   ¦   +---storage
+¦   +---mysql2
+¦   ¦   +---lib
+¦   ¦   ¦   +---auth_plugins
+¦   ¦   ¦   +---base
+¦   ¦   ¦   +---commands
+¦   ¦   ¦   +---constants
+¦   ¦   ¦   +---packets
+¦   ¦   ¦   +---parsers
+¦   ¦   ¦   +---promise
+¦   ¦   +---typings
+¦   ¦       +---mysql
+¦   ¦           +---lib
+¦   ¦               +---constants
+¦   ¦               +---parsers
+¦   ¦               +---protocol
+¦   ¦                   +---packets
+¦   ¦                   ¦   +---params
+¦   ¦                   +---sequences
+¦   ¦                       +---promise
+¦   +---named-placeholders
+¦   +---negotiator
+¦   ¦   +---lib
+¦   +---node-addon-api
+¦   ¦   +---tools
+¦   +---node-gyp-build
+¦   +---nodemailer
+¦   ¦   +---lib
+¦   ¦       +---addressparser
+¦   ¦       +---base64
+¦   ¦       +---dkim
+¦   ¦       +---fetch
+¦   ¦       +---json-transport
+¦   ¦       +---mail-composer
+¦   ¦       +---mailer
+¦   ¦       +---mime-funcs
+¦   ¦       +---mime-node
+¦   ¦       +---punycode
+¦   ¦       +---qp
+¦   ¦       +---sendmail-transport
+¦   ¦       +---ses-transport
+¦   ¦       +---shared
+¦   ¦       +---smtp-connection
+¦   ¦       +---smtp-pool
+¦   ¦       +---smtp-transport
+¦   ¦       +---stream-transport
+¦   ¦       +---well-known
+¦   ¦       +---xoauth2
+¦   +---nodemon
+¦   ¦   +---bin
+¦   ¦   +---doc
+¦   ¦   ¦   +---cli
+¦   ¦   +---lib
+¦   ¦       +---cli
+¦   ¦       +---config
+¦   ¦       +---help
+¦   ¦       +---monitor
+¦   ¦       +---rules
+¦   ¦       +---utils
+¦   +---normalize-path
+¦   +---object-assign
+¦   +---object-inspect
+¦   ¦   +---.github
+¦   ¦   +---example
+¦   ¦   +---test
+¦   ¦       +---browser
+¦   +---on-finished
+¦   +---once
+¦   +---parseurl
+¦   +---path-to-regexp
+¦   ¦   +---dist
+¦   +---picomatch
+¦   ¦   +---lib
+¦   +---proxy-addr
+¦   +---proxy-from-env
+¦   +---pstree.remy
+¦   ¦   +---lib
+¦   ¦   +---tests
+¦   ¦       +---fixtures
+¦   +---qs
+¦   ¦   +---.github
+¦   ¦   +---dist
+¦   ¦   +---lib
+¦   ¦   +---test
+¦   +---range-parser
+¦   +---raw-body
+¦   +---readable-stream
+¦   ¦   +---lib
+¦   ¦       +---internal
+¦   ¦           +---streams
+¦   +---readdirp
+¦   +---router
+¦   ¦   +---lib
+¦   +---safe-buffer
+¦   +---safer-buffer
+¦   +---semver
+¦   ¦   +---bin
+¦   ¦   +---classes
+¦   ¦   +---functions
+¦   ¦   +---internal
+¦   ¦   +---ranges
+¦   +---send
+¦   +---serve-static
+¦   +---setprototypeof
+¦   ¦   +---test
+¦   +---side-channel
+¦   ¦   +---.github
+¦   ¦   +---test
+¦   +---side-channel-list
+¦   ¦   +---.github
+¦   ¦   +---test
+¦   +---side-channel-map
+¦   ¦   +---.github
+¦   ¦   +---test
+¦   +---side-channel-weakmap
+¦   ¦   +---.github
+¦   ¦   +---test
+¦   +---simple-update-notifier
+¦   ¦   +---build
+¦   ¦   +---src
+¦   +---sql-escaper
+¦   ¦   +---lib
+¦   +---statuses
+¦   +---streamsearch
+¦   ¦   +---.github
+¦   ¦   ¦   +---workflows
+¦   ¦   +---lib
+¦   ¦   +---test
+¦   +---string_decoder
+¦   ¦   +---lib
+¦   +---supports-color
+¦   +---to-regex-range
+¦   +---toidentifier
+¦   +---touch
+¦   ¦   +---bin
+¦   +---type-is
+¦   +---typedarray
+¦   ¦   +---example
+¦   ¦   +---test
+¦   ¦       +---server
+¦   +---undefsafe
+¦   ¦   +---.github
+¦   ¦   ¦   +---workflows
+¦   ¦   +---lib
+¦   +---undici-types
+¦   +---unpipe
+¦   +---util-deprecate
+¦   +---uuid
+¦   ¦   +---dist
+¦   ¦   +---dist-node
+¦   ¦       +---bin
+¦   +---vary
+¦   +---wrappy
++---src
+¦   +---config
+¦   +---controllers
+¦   +---middlewares
+¦   +---repositories
+¦   +---routes
+¦   +---services
+¦   +---utils
+¦   +---validators
++---tests
++---uploads
+    +---avatars
+    +---pdfs
+    +---thumbnails
+    +---videos

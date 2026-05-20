@@ -32,6 +32,14 @@ const createCourse = async (teacherUser, courseData) => {
         thumbnail_url: value.thumbnail_url || null
     });
 
+    const notificationService = require('./notificationService');
+    notificationService.notifyAdmins(
+        'system',
+        '📘 New Course Created',
+        `A new course "${course.title}" has been created by ${teacherUser.full_name}.`,
+        '/admin-dashboard.html'
+    ).catch(() => {});
+
     return course;
 };
 
@@ -619,6 +627,31 @@ const finishLessonAndAwardXP = async (studentId, courseId, chapterId, lessonId, 
                     const skillService = require('./skillService');
                     await skillService.unlockSkillIfCourseCompleted(studentId, courseId);
                     await progressAggregator.handleCourseCompleted(studentId, courseId);
+
+                    // notify the admin 
+
+                    notificationService.notifyAdmins(
+                        'achievement',
+                        '🎉 Course Completed',
+                        `A student completed the course "${courseInfo.title}".`,
+                        '/teacher-students.html'
+                    ).catch(() => {});
+
+                    // ── Notify the teacher ──
+                    try {
+                        const notificationService = require('./notificationService');
+                        const course = await courseRepository.findCourseById(courseId);
+                        if (course) {
+                            await notificationService.notifyTeacher(
+                                courseId,
+                                'achievement',
+                                '🎉 Course Completed',
+                                `A student has completed your course "${course.title}".`
+                            );
+                        }
+                    } catch (err) {
+                        console.error('Failed to notify teacher about course completion:', err.message);
+                    }
                 }
             } catch (err) {
                 console.error('Failed to unlock skill / course_completed badge:', err.message);
@@ -923,31 +956,66 @@ Return ONLY the JSON object, no other text.`;
 
     // 7. Award XP only on FIRST pass
     let xpGained = 0;
-    console.log('XP debug: alreadyPassed =', alreadyPassed, ', xp_reward =', assessment.xp_reward, ', passed =', passed);
     if (passed && !alreadyPassed && assessment.xp_reward > 0) {
         xpGained = assessment.xp_reward;
-        console.log('Awarding XP:', xpGained);
+
+        // Global XP
         const connection = await db.getConnection();
         try {
             await courseRepository.updateStudentXP(connection, studentId, xpGained);
         } finally {
             connection?.release();
         }
+
+        // Subdomain progress
         const courseInfo = await courseRepository.findCourseById(assessment.course_id);
         if (courseInfo?.subdomain_id) {
             await studentService.updateStudentProgress(studentId, courseInfo.subdomain_id, xpGained);
         }
+
+        // Skill‑specific progress
+        try {
+            if (courseInfo?.skill_id) {
+                const progressRepository = require('../repositories/progressRepository');
+                await progressRepository.updateLessonProgress(studentId, courseInfo.skill_id, xpGained);
+            }
+        } catch (err) {
+            console.error('Failed to update skill progress after boss exam:', err.message);
+        }
+
+        // Badge evaluation
         const progressAggregator = require('./progressAggregator');
         await progressAggregator.handleQuizPassed(studentId, assessmentId, finalScore, passed).catch(() => {});
-    } else {
-        console.log('XP NOT awarded. alreadyPassed:', alreadyPassed, ', xp_reward:', assessment.xp_reward, ', passed:', passed);
+
+        // ── Notify the teacher about the boss exam pass ──
+        try {
+            const notificationService = require('./notificationService');
+            const course = await courseRepository.findCourseById(assessment.course_id);
+
+            notificationService.notifyAdmins(
+                'achievement',
+                '⚔️ Boss Exam Passed',
+                `A student passed the boss exam "${assessment.title}" in course "${courseInfo.title}".`,
+                '/teacher-students.html'
+            ).catch(() => {});
+
+            if (course) {
+                await notificationService.notifyTeacher(
+                    assessment.course_id,
+                    'achievement',
+                    '⚔️ Boss Exam Passed',
+                    `A student has passed the boss exam "${assessment.title}" in your course "${course.title}".`
+                );
+            }
+        } catch (err) {
+            console.error('Failed to notify teacher about boss exam:', err.message);
+        }
     }
 
     if (isNaN(finalScore) || finalScore === null || finalScore === undefined) {
         finalScore = quickScore || 0;
     }
 
-    // Return xp_gained (even if 0)
     return {
         results: quickResults,
         score: finalScore,
@@ -961,19 +1029,13 @@ Return ONLY the JSON object, no other text.`;
 // ADDITIONAL FUNCTIONS (from dev branch)
 // ============================================================
 
-
-
 const getLessonsByChapter = async (chapterId) => {
     return await courseRepository.findLessonsByChapter(chapterId);
 };
 
-// services/courseService.js
-
 const getCourseSubdomain = async (courseId) => {
     return await courseRepository.getCourseSubdomain(courseId);
 };
-
-
 
 const updateCourseInfo = async (courseId, updateData, currentUser) => {
     // 1. التحقق من وجود الكورس
@@ -1010,8 +1072,6 @@ const updateCourseInfo = async (courseId, updateData, currentUser) => {
 
     return updatedCourse;
 };
-
-
 
 
 // ============================================================
@@ -1054,6 +1114,6 @@ module.exports = {
     submitAssessment,
     getLessonsByChapter, 
     getCourseSubdomain,
-    submitBossExam
-   ,updateCourseInfo
+    submitBossExam,
+    updateCourseInfo
 };
