@@ -243,7 +243,7 @@ router.get('/:courseId/subdomain', authMiddleware, roleMiddleware('student'), co
 router.patch(
     '/:courseId/info',
     authMiddleware,
-    roleMiddleware('teacher'),
+    roleMiddleware('admin'),
     courseController.updateCourseInfo
 );
 
