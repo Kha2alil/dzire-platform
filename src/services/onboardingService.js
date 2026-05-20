@@ -1,15 +1,15 @@
 const OnboardingRepository = require('../repositories/onboardingRepository');
 
 const LEVEL_THRESHOLDS = {
-  pro:          0.70,
+  advanced:          0.70,
   intermediate: 0.40,
 };
-const QUESTIONS_PER_TEST = 10;
-const VALID_LEVELS       = ['beginner', 'intermediate', 'pro'];
+const QUESTIONS_PER_TEST = 17;
+const VALID_LEVELS       = ['beginner', 'intermediate', 'advanced'];
 
 /* ── helpers ── */
 function assignLevel(scorePercent) {
-  if (scorePercent >= LEVEL_THRESHOLDS.pro)          return 'pro';
+  if (scorePercent >= LEVEL_THRESHOLDS.advanced)          return 'advanced';
   if (scorePercent >= LEVEL_THRESHOLDS.intermediate) return 'intermediate';
   return 'beginner';
 }
@@ -39,6 +39,14 @@ function gradeAnswers(answers, questions) {
 
   const scorePercent = totalPoints > 0 ? earnedPoints / totalPoints : 0;
   return { earnedPoints, totalPoints, scorePercent, perQuestion };
+}
+
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -72,18 +80,40 @@ const OnboardingService = {
       throw err;
     }
 
-    const questions = await OnboardingRepository.getQuestions(
-      subdomainId, level, QUESTIONS_PER_TEST
-    );
-    if (!questions.length) {
+    // 7 beginner, 5 intermediate, 5 advanced = 17 total
+    const counts = { beginner: 7, intermediate: 5, advanced: 5 };
+
+    let allQuestions = [];
+
+    for (const [lvl, count] of Object.entries(counts)) {
+      const questions = await OnboardingRepository.getQuestions(
+        subdomainId, lvl, count
+      );
+      allQuestions = allQuestions.concat(questions);
+    }
+
+    // If any level didn't have enough questions, fill the gap with any available questions
+    if (allQuestions.length < QUESTIONS_PER_TEST) {
+      const remaining = QUESTIONS_PER_TEST - allQuestions.length;
+      // Try to get remaining from all levels (the repository can return any level)
+      const extraQuestions = await OnboardingRepository.getQuestions(
+        subdomainId, null, remaining
+      );
+      allQuestions = allQuestions.concat(extraQuestions);
+    }
+
+    if (allQuestions.length === 0) {
       const err = new Error(
-        `No placement questions available for this subdomain at level "${level}".`
+        'No placement questions available for this subdomain.'
       );
       err.statusCode = 404;
       throw err;
     }
 
-    return questions.map(q => ({
+    // Shuffle the mixed set and take exactly QUESTIONS_PER_TEST
+    allQuestions = shuffleArray(allQuestions).slice(0, QUESTIONS_PER_TEST);
+
+    return allQuestions.map(q => ({
       ...q,
       options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options,
     }));
@@ -174,6 +204,7 @@ const OnboardingService = {
 
     return { assignedLevel: safeLevel, skipped: true };
   },
+  
 };
 
 module.exports = OnboardingService;

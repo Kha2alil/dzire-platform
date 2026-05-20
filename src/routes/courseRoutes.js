@@ -239,4 +239,12 @@ router.get(
     courseController.getChapterLessons
 );
 router.get('/:courseId/subdomain', authMiddleware, roleMiddleware('student'), courseController.getCourseSubdomain);
+
+router.patch(
+    '/:courseId/info',
+    authMiddleware,
+    roleMiddleware('teacher'),
+    courseController.updateCourseInfo
+);
+
 module.exports = router;
